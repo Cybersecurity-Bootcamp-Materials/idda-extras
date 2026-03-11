@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W4D2 — Domain Attacks: Exercises & Labs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #1b1a19;
+    --bg-surface: #252423;
+    --bg-elevated: #292827;
+    --bg-hover: #2d2c2b;
+    --bg-selected: #333231;
+    --border-subtle: #323130;
+    --border-medium: #3b3a39;
+    --border-strong: #484644;
+    --text-primary: #f3f2f1;
+    --text-secondary: #d2d0ce;
+    --text-tertiary: #a19f9d;
+    --text-muted: #8a8886;
+    --text-faint: #605e5c;
+    --accent-blue: #0078d4;
+    --accent-blue-light: #6cb8f6;
+    --accent-blue-dim: rgba(0,120,212,.08);
+    --sev-high: #d13438;
+    --sev-high-text: #f4a3a6;
+    --sev-high-bg: rgba(209,52,56,.1);
+    --sev-med: #ff8c00;
+    --sev-med-text: #ffb957;
+    --sev-med-bg: rgba(255,140,0,.1);
+    --sev-low: #fce100;
+    --sev-low-bg: rgba(252,225,0,.08);
+    --success: #107c10;
+    --success-text: #6ccf6c;
+    --success-bg: rgba(16,124,16,.1);
+    --lab: #00b7c3;
+    --lab-text: #5ce0eb;
+    --exercise: #8764b8;
+    --exercise-text: #b4a0ff;
+    --font-ui: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --shadow-card: 0 1px 3px rgba(0,0,0,.3), 0 0 0 1px var(--border-subtle);
+    --shadow-elevated: 0 4px 16px rgba(0,0,0,.4), 0 0 0 1px var(--border-subtle);
+    --t-fast: .15s cubic-bezier(.4,0,.2,1);
+    --t-med: .25s cubic-bezier(.4,0,.2,1);
+    --topbar-h: 48px;
+    --statusbar-h: 28px;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
+  html { font-size: 14px; -webkit-font-smoothing: antialiased }
+  body { font-family: var(--font-ui); background: var(--bg-base); color: var(--text-secondary); line-height: 1.6; overflow: hidden; height: 100vh }
+  code { font-family: var(--font-mono); font-size: .88em; background: rgba(0,0,0,.3); padding: 2px 6px; border-radius: 3px; color: var(--accent-blue-light) }
+  pre { font-family: var(--font-mono); font-size: .82rem; background: #141312; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 18px; overflow-x: auto; color: var(--text-secondary); line-height: 1.55; margin: 10px 0 }
+  pre code { background: none; padding: 0; color: inherit }
+  strong { font-weight: 600; color: var(--text-primary) }
+  ::-webkit-scrollbar { width: 6px; height: 6px }
+  ::-webkit-scrollbar-track { background: transparent }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px }
+
+  /* ── Layout ─────────────────────────────────────── */
+  .app { display: flex; flex-direction: column; height: 100vh }
+
+  .topbar {
+    background: #0a0a0a; height: var(--topbar-h);
+    display: flex; align-items: center; padding: 0 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    gap: 12px; flex-shrink: 0; z-index: 100;
+  }
+  .topbar .logo { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -.02em; user-select: none }
+  .topbar .logo .brand-accent { color: var(--accent-blue-light); font-weight: 300; margin-left: -2px }
+  .topbar .sep { width: 1px; height: 24px; background: var(--border-medium); flex-shrink: 0 }
+  .topbar .week-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; padding: 2px 7px; border-radius: 3px; background: rgba(0,120,212,.15); color: var(--accent-blue-light); border: 1px solid rgba(0,120,212,.3) }
+  .topbar .right { margin-left: auto; display: flex; align-items: center; gap: 10px }
+  .slide-counter { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted) }
+  .back-link { font-size: 11px; color: var(--text-tertiary); text-decoration: none; padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); transition: all var(--t-fast) }
+  .back-link:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-strong); text-decoration: none }
+
+  /* ── Slide Area ─────────────────────────────────── */
+  .slide-viewport {
+    flex: 1; overflow: hidden; position: relative;
+  }
+  .slide {
+    position: absolute; inset: 0;
+    display: none; flex-direction: column;
+    overflow-y: auto;
+    padding: 40px 48px 60px;
+  }
+  .slide.active { display: flex }
+  .slide-inner {
+    max-width: 820px; width: 100%; margin: 0 auto;
+  }
+
+  /* ── Slide Typography ──────────────────────────── */
+  .slide-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .slide-label.lbl-theory { color: var(--success-text) }
+  .slide-label.lbl-exercise { color: var(--exercise-text) }
+  .slide-label.lbl-lab { color: var(--lab-text) }
+  .slide-label.lbl-quiz { color: var(--sev-med-text) }
+
+  .slide h1 {
+    font-size: 26px; font-weight: 700; color: var(--text-primary);
+    letter-spacing: -.03em; line-height: 1.2; margin-bottom: 6px;
+  }
+  .slide h2 {
+    font-size: 18px; font-weight: 600; color: var(--text-primary);
+    letter-spacing: -.02em; margin: 20px 0 10px; line-height: 1.3;
+  }
+  .slide h3 {
+    font-size: 14px; font-weight: 600; color: var(--accent-blue-light);
+    margin: 16px 0 8px; text-transform: uppercase; letter-spacing: .03em;
+  }
+  .slide p { margin: 8px 0; color: var(--text-secondary) }
+  .slide ul, .slide ol { margin: 8px 0 8px 20px; color: var(--text-secondary) }
+  .slide li { margin: 4px 0 }
+  .slide-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 20px }
+
+  /* ── Info Boxes ─────────────────────────────────── */
+  .info-box {
+    border-radius: var(--radius-md); padding: 14px 18px; margin: 14px 0;
+    border-left: 3px solid; font-size: 13px;
+  }
+  .info-box.warn { background: var(--sev-med-bg); border-color: var(--sev-med); color: var(--sev-med-text) }
+  .info-box.danger { background: var(--sev-high-bg); border-color: var(--sev-high); color: var(--sev-high-text) }
+  .info-box.info { background: rgba(0,120,212,.08); border-color: var(--accent-blue); color: var(--accent-blue-light) }
+  .info-box.success { background: var(--success-bg); border-color: var(--success); color: var(--success-text) }
+  .info-box.lab-box { background: rgba(0,183,195,.08); border-color: var(--lab); color: var(--lab-text) }
+  .info-box strong { color: inherit }
+
+  /* ── Cards Grid ─────────────────────────────────── */
+  .card-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px; margin: 14px 0;
+  }
+  .g-card {
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 16px; transition: all var(--t-fast);
+  }
+  .g-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-elevated) }
+  .g-card .g-icon { font-size: 24px; margin-bottom: 8px }
+  .g-card .g-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px }
+  .g-card .g-text { font-size: 12px; color: var(--text-tertiary); line-height: 1.5 }
+
+  /* ── Quiz / Exercise Interaction ────────────────── */
+  .quiz-block {
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 20px; margin: 14px 0;
+  }
+  .quiz-block .q-question {
+    font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;
+  }
+  .quiz-block .q-options { display: flex; flex-direction: column; gap: 8px }
+  .q-opt {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle); background: var(--bg-surface);
+    cursor: pointer; transition: all var(--t-fast); font-size: 13px; color: var(--text-secondary);
+  }
+  .q-opt:hover { border-color: var(--border-strong); background: var(--bg-hover) }
+  .q-opt .q-letter {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--border-medium); color: var(--text-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .q-opt.correct { border-color: var(--success); background: var(--success-bg) }
+  .q-opt.correct .q-letter { background: var(--success); color: #fff }
+  .q-opt.wrong { border-color: var(--sev-high); background: var(--sev-high-bg) }
+  .q-opt.wrong .q-letter { background: var(--sev-high); color: #fff }
+  .q-feedback {
+    margin-top: 12px; padding: 10px 14px; border-radius: var(--radius-md);
+    font-size: 12px; display: none;
+  }
+  .q-feedback.show { display: block }
+  .q-feedback.fb-correct { background: var(--success-bg); color: var(--success-text); border: 1px solid rgba(16,124,16,.2) }
+  .q-feedback.fb-wrong { background: var(--sev-high-bg); color: var(--sev-high-text); border: 1px solid rgba(209,52,56,.2) }
+
+  /* ── Interactive Inputs ─────────────────────────── */
+  .lab-input-group { margin: 12px 0 }
+  .lab-input-group label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: 6px }
+  .lab-input {
+    width: 100%; padding: 10px 14px; font-family: var(--font-mono); font-size: 13px;
+    background: #141312; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+    color: var(--text-primary); outline: none; transition: border-color var(--t-fast);
+  }
+  .lab-input:focus { border-color: var(--accent-blue) }
+  .lab-input::placeholder { color: var(--text-faint) }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: var(--radius-md); border: none;
+    font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all var(--t-fast);
+  }
+  .btn-primary { background: var(--accent-blue); color: #fff }
+  .btn-primary:hover { background: #1a86d9 }
+  .btn-success { background: var(--success); color: #fff }
+  .btn-success:hover { background: #12961a }
+  .btn-outline { background: transparent; color: var(--text-tertiary); border: 1px solid var(--border-medium) }
+  .btn-outline:hover { background: var(--bg-hover); color: var(--text-primary) }
+
+  .result-box {
+    margin-top: 12px; padding: 12px 16px;
+    background: #141312; border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); font-family: var(--font-mono);
+    font-size: 12px; color: var(--text-tertiary); min-height: 40px;
+    white-space: pre-wrap;
+  }
+
+  /* ── Table ──────────────────────────────────────── */
+  .data-table {
+    width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12.5px;
+  }
+  .data-table th {
+    text-align: left; padding: 8px 12px; background: var(--bg-surface);
+    border-bottom: 2px solid var(--border-medium); color: var(--text-muted);
+    font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .06em;
+  }
+  .data-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary);
+  }
+  .data-table tr:hover td { background: var(--bg-hover) }
+
+  /* ── Tag ────────────────────────────────────────── */
+  .tag {
+    display: inline-flex; padding: 2px 8px; border-radius: 3px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .tag-red { background: var(--sev-high-bg); color: var(--sev-high-text); border: 1px solid rgba(209,52,56,.2) }
+  .tag-orange { background: var(--sev-med-bg); color: var(--sev-med-text); border: 1px solid rgba(255,140,0,.2) }
+  .tag-green { background: var(--success-bg); color: var(--success-text); border: 1px solid rgba(16,124,16,.2) }
+  .tag-blue { background: rgba(0,120,212,.1); color: var(--accent-blue-light); border: 1px solid rgba(0,120,212,.2) }
+
+  /* ── Comparison Columns ─────────────────────────── */
+  .vs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 }
+  .vs-col { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px }
+  .vs-col h3 { margin-top: 0 }
+
+  /* ── Navigation ─────────────────────────────────── */
+  .nav-bar {
+    height: var(--statusbar-h); background: #0a0a0a;
+    border-top: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; flex-shrink: 0; padding: 0 16px;
+  }
+  .nav-btn {
+    padding: 3px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated); color: var(--text-tertiary); font-size: 11px;
+    font-family: var(--font-ui); font-weight: 600; cursor: pointer; transition: all var(--t-fast);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .nav-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-strong) }
+  .nav-btn:disabled { opacity: .3; cursor: default }
+  .nav-dots { display: flex; gap: 5px; align-items: center }
+  .nav-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong);
+    transition: all var(--t-fast); cursor: pointer;
+  }
+  .nav-dot.active { background: var(--accent-blue); width: 18px; border-radius: 3px }
+  .nav-dot:hover { background: var(--text-muted) }
+
+  /* ── Statusbar ──────────────────────────────────── */
+  .statusbar {
+    height: var(--statusbar-h); background: var(--accent-blue);
+    display: flex; align-items: center; padding: 0 16px; gap: 16px;
+    font-size: 11px; color: rgba(255,255,255,.9); flex-shrink: 0; user-select: none;
+  }
+  .statusbar .sb-sep { width: 1px; height: 14px; background: rgba(255,255,255,.2) }
+  .statusbar .sb-item { display: flex; align-items: center; gap: 5px }
+  .statusbar .sb-dot { width: 7px; height: 7px; border-radius: 50%; background: #4cff4c }
+  .statusbar .sb-right { margin-left: auto; display: flex; align-items: center; gap: 14px }
+
+  /* ── Animations ─────────────────────────────────── */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
+  .slide.active .slide-inner { animation: fadeIn .3s ease-out }
+
+  /* ── Responsive ─────────────────────────────────── */
+  @media (max-width: 700px) {
+    .slide { padding: 24px 18px 48px }
+    .slide h1 { font-size: 20px }
+    .card-grid { grid-template-columns: 1fr }
+    .vs-grid { grid-template-columns: 1fr }
+  }
+
+  /* ── Drag-drop matching ─────────────────────────── */
+  .match-exercise { margin: 14px 0 }
+  .match-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: start }
+  .match-col { display: flex; flex-direction: column; gap: 8px }
+  .match-item {
+    padding: 10px 14px; background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); font-size: 12px; color: var(--text-secondary);
+    cursor: pointer; transition: all var(--t-fast); user-select: none;
+  }
+  .match-item:hover { border-color: var(--accent-blue); background: var(--bg-hover) }
+  .match-item.selected { border-color: var(--accent-blue); background: var(--accent-blue-dim); color: var(--accent-blue-light) }
+  .match-item.matched-correct { border-color: var(--success); background: var(--success-bg); color: var(--success-text) }
+  .match-item.matched-wrong { border-color: var(--sev-high); background: var(--sev-high-bg); color: var(--sev-high-text) }
+  .match-arrow { color: var(--text-faint); font-size: 18px; display: flex; align-items: center; justify-content: center; padding-top: 40px }
+
+  /* ── Highlight animation ────────────────────────── */
+  .domain-highlight { display: inline-block; padding: 2px 6px; border-radius: 3px; font-family: var(--font-mono); font-size: 13px; margin: 2px 0 }
+  .domain-highlight.legit { background: var(--success-bg); color: var(--success-text); border: 1px solid rgba(16,124,16,.2) }
+  .domain-highlight.typo { background: var(--sev-high-bg); color: var(--sev-high-text); border: 1px solid rgba(209,52,56,.2) }
+  .domain-highlight.unknown { background: var(--bg-elevated); color: var(--text-tertiary); border: 1px solid var(--border-subtle) }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="logo">
+    <span style="font-size:20px">&#128737;</span>
+    SOC<span class="brand-accent">Academy</span>
+  </div>
+  <div class="sep"></div>
+  <span class="week-badge">W4D2 &middot; Exercises</span>
+  <div class="right">
+    <span class="slide-counter" id="slide-counter">1 / 20</span>
+    <div class="sep"></div>
+    <a href="index.html" class="back-link">&#8592; Day Plan</a>
+  </div>
+</div>
+
+<!-- ═══ SLIDES ═══ -->
+<div class="slide-viewport" id="slide-viewport">
+
+<!-- ============================================================ -->
+<!-- SLIDE 1: Title -->
+<!-- ============================================================ -->
+<div class="slide active" data-slide="1">
+  <div class="slide-inner">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center">
+      <div style="font-size:64px;margin-bottom:16px">&#127760;&#128274;</div>
+      <h1 style="font-size:32px;margin-bottom:8px">Domain Attacks &amp; Credential Exploitation</h1>
+      <p class="slide-subtitle" style="font-size:15px">Week 4 &middot; Day 2 &mdash; Interactive Exercises &amp; Labs</p>
+      <div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap;justify-content:center">
+        <span class="tag tag-red">Typosquatting</span>
+        <span class="tag tag-orange">Domain Hijacking</span>
+        <span class="tag tag-blue">Pass the Hash</span>
+        <span class="tag tag-green">Kerberos</span>
+        <span class="tag tag-red">LDAP</span>
+        <span class="tag tag-orange">Brute Force</span>
+      </div>
+      <p style="margin-top:32px;color:var(--text-faint);font-size:12px">Use <kbd style="background:var(--bg-elevated);padding:2px 8px;border-radius:3px;border:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:11px">&#8592;</kbd> <kbd style="background:var(--bg-elevated);padding:2px 8px;border-radius:3px;border:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:11px">&#8594;</kbd> arrow keys to navigate</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 2: Domain Attacks Overview -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="2">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory Recap</span>
+    <h1>Why Domain Attacks Matter</h1>
+    <p class="slide-subtitle">Domains are the digital front door of every organization</p>
+
+    <div class="card-grid">
+      <div class="g-card">
+        <div class="g-icon">&#9888;&#65039;</div>
+        <div class="g-title">Operational Disruption</div>
+        <div class="g-text">DNS hijacking redirects traffic, alters content, and halts business operations</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128148;</div>
+        <div class="g-title">Trust Erosion</div>
+        <div class="g-text">Customers lose confidence when domains serve malicious content</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128176;</div>
+        <div class="g-title">Financial Impact</div>
+        <div class="g-text">Lost revenue, legal costs, ransom demands, and recovery expenses</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128240;</div>
+        <div class="g-title">Reputational Damage</div>
+        <div class="g-text">Brand association with fraud takes months or years to recover from</div>
+      </div>
+    </div>
+
+    <div class="info-box info">
+      <strong>Key Takeaway:</strong> Prevention is exponentially cheaper than recovery. Domain security must be proactive, not reactive.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 3: Typosquatting Theory -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="3">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Typosquatting</h1>
+    <p class="slide-subtitle">Exploiting human typing errors to redirect users to malicious sites</p>
+
+    <h2>Attack Flow</h2>
+    <ol>
+      <li><strong>Choose target</strong> &mdash; high-traffic site (banks, social media, e-commerce)</li>
+      <li><strong>Register misspelled domains</strong> &mdash; often dozens of variations</li>
+      <li><strong>Clone the legitimate site</strong> &mdash; CSS, logos, forms look identical</li>
+      <li><strong>Harvest credentials or push malware</strong></li>
+    </ol>
+
+    <h2>Common Typo Patterns</h2>
+    <table class="data-table">
+      <thead><tr><th>Pattern</th><th>Legitimate</th><th>Typosquat</th></tr></thead>
+      <tbody>
+        <tr><td>Missing letter</td><td><code>google.com</code></td><td><code>gogle.com</code></td></tr>
+        <tr><td>Extra letter</td><td><code>facebook.com</code></td><td><code>faceboook.com</code></td></tr>
+        <tr><td>Adjacent key</td><td><code>amazon.com</code></td><td><code>amaxon.com</code></td></tr>
+        <tr><td>Swapped letters</td><td><code>paypal.com</code></td><td><code>papyal.com</code></td></tr>
+        <tr><td>Wrong TLD</td><td><code>microsoft.com</code></td><td><code>microsoft.co</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Detection Methods</h2>
+    <ul>
+      <li><strong>WHOIS monitoring</strong> &mdash; track newly registered similar domains</li>
+      <li><strong>Typo rules engine</strong> &mdash; automated alerts on common misspellings</li>
+      <li><strong>SSL certificate validation</strong> &mdash; check issuer and validity</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 4: Exercise — Spot the Typosquat -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="4">
+  <div class="slide-inner">
+    <span class="slide-label lbl-exercise">&#9881; Exercise 1</span>
+    <h1>Spot the Typosquat</h1>
+    <p class="slide-subtitle">Click on each domain to classify it as <span class="tag tag-green" style="font-size:10px">LEGITIMATE</span> or <span class="tag tag-red" style="font-size:10px">TYPOSQUAT</span></p>
+
+    <div id="typo-exercise" style="margin-top:20px"></div>
+    <div id="typo-score" style="margin-top:16px;font-size:13px;color:var(--text-muted)"></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 5: Domain Hijacking Theory -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="5">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Domain Hijacking</h1>
+    <p class="slide-subtitle">Unauthorized takeover of domain name registrations</p>
+
+    <h2>Exploitation Techniques</h2>
+    <div class="card-grid">
+      <div class="g-card">
+        <div class="g-icon">&#128272;</div>
+        <div class="g-title">Registrar Compromise</div>
+        <div class="g-text">Attacker gains credentials to the registrar account via phishing or credential stuffing</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128100;</div>
+        <div class="g-title">Social Engineering</div>
+        <div class="g-text">Manipulates registrar support staff into transferring ownership</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#9200;</div>
+        <div class="g-title">Expired Domain Snatching</div>
+        <div class="g-text">Monitors and registers domains the moment their registration lapses</div>
+      </div>
+    </div>
+
+    <h2>Prevention Checklist</h2>
+    <table class="data-table">
+      <thead><tr><th>Control</th><th>Description</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr><td>2FA on Registrar</td><td>Enable MFA on all registrar accounts</td><td><span class="tag tag-red">Critical</span></td></tr>
+        <tr><td>Domain Lock</td><td>Enable registrar lock to prevent unauthorized transfers</td><td><span class="tag tag-red">Critical</span></td></tr>
+        <tr><td>DNSSEC</td><td>Sign DNS records to prevent spoofing</td><td><span class="tag tag-orange">High</span></td></tr>
+        <tr><td>Auto-Renewal</td><td>Prevent accidental expiration</td><td><span class="tag tag-orange">High</span></td></tr>
+        <tr><td>Change Alerts</td><td>Notifications on any DNS record changes</td><td><span class="tag tag-green">Medium</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 6: Quiz — Domain Hijacking -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="6">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Quiz</span>
+    <h1>Domain Hijacking Quiz</h1>
+    <p class="slide-subtitle">Test your understanding</p>
+
+    <div class="quiz-block" id="q1">
+      <div class="q-question">1. Which is the MOST critical control to prevent domain hijacking?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q1',this,false)"><span class="q-letter">A</span> Buying similar domain names</div>
+        <div class="q-opt" onclick="checkQuiz('q1',this,true)"><span class="q-letter">B</span> Enabling 2FA on the registrar account</div>
+        <div class="q-opt" onclick="checkQuiz('q1',this,false)"><span class="q-letter">C</span> Using a CDN for the website</div>
+        <div class="q-opt" onclick="checkQuiz('q1',this,false)"><span class="q-letter">D</span> Changing the website's CSS regularly</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q1-correct">Correct! 2FA prevents unauthorized access to registrar accounts, which is the primary attack vector.</div>
+      <div class="q-feedback fb-wrong" id="q1-wrong">Not quite. The most effective control is enabling 2FA on the domain registrar account.</div>
+    </div>
+
+    <div class="quiz-block" id="q2" style="margin-top:16px">
+      <div class="q-question">2. An attacker registers a domain right after it expires. This technique is called:</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q2',this,false)"><span class="q-letter">A</span> Typosquatting</div>
+        <div class="q-opt" onclick="checkQuiz('q2',this,false)"><span class="q-letter">B</span> DNS poisoning</div>
+        <div class="q-opt" onclick="checkQuiz('q2',this,true)"><span class="q-letter">C</span> Expired domain snatching</div>
+        <div class="q-opt" onclick="checkQuiz('q2',this,false)"><span class="q-letter">D</span> WHOIS masking</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q2-correct">Correct! Expired domain snatching is when attackers register domains that owners forget to renew.</div>
+      <div class="q-feedback fb-wrong" id="q2-wrong">Not quite. This is called expired domain snatching &mdash; monitoring and grabbing domains when registration lapses.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 7: Pass the Hash Theory -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="7">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Pass the Hash (PtH)</h1>
+    <p class="slide-subtitle">Using stolen NTLM hashes to authenticate without cracking passwords</p>
+
+    <div class="vs-grid">
+      <div class="vs-col">
+        <h3>&#128274; Normal Auth</h3>
+        <ol style="font-size:12px">
+          <li>User enters password</li>
+          <li>System hashes it (NTLM)</li>
+          <li>Hash compared to stored hash</li>
+          <li>Access granted if match</li>
+        </ol>
+      </div>
+      <div class="vs-col">
+        <h3>&#128274;&#8205;&#9760;&#65039; PtH Attack</h3>
+        <ol style="font-size:12px">
+          <li>Attacker dumps hashes from memory</li>
+          <li>Passes hash directly to auth</li>
+          <li>No password needed!</li>
+          <li>Lateral movement across network</li>
+        </ol>
+      </div>
+    </div>
+
+    <h2>Key Tools</h2>
+    <pre><code># Dump hashes with Mimikatz
+mimikatz # sekurlsa::logonpasswords
+
+# Pass the hash to remote system
+mimikatz # sekurlsa::pth /user:admin /domain:corp.local /rc4:&lt;NTLM_HASH&gt;
+
+# Alternative: psexec with hash
+psexec \\target -u admin -p &lt;NTLM_HASH&gt;</code></pre>
+
+    <div class="info-box danger">
+      <strong>NTLM Weakness:</strong> Hashes are stored in memory (LSASS process) and can be extracted by any process with admin rights. No forward secrecy &mdash; the same hash works even after password change until re-login.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 8: Exercise — Hash Analysis -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="8">
+  <div class="slide-inner">
+    <span class="slide-label lbl-exercise">&#9881; Exercise 2</span>
+    <h1>Analyze the Hash Dump</h1>
+    <p class="slide-subtitle">A Mimikatz dump was found on a compromised workstation. Analyze it.</p>
+
+    <pre style="font-size:11px"><code>Authentication Id : 0 ; 996 (00000000:000003e4)
+Session           : Service from 0
+User Name         : svc_backup
+Domain            : CORP
+Logon Server      : DC01
+Logon Time        : 3/10/2026 8:15:22 AM
+SID               : S-1-5-21-3623811015-3361044348-30300820-1013
+        msv :
+         [00000003] Primary
+         * Username : svc_backup
+         * Domain   : CORP
+         * NTLM     : aad3b435b51404eeaad3b435b51404ee
+         * SHA1     : da39a3ee5e6b4b0d3255bfef95601890afd80709
+
+Authentication Id : 0 ; 55321 (00000000:0000d819)
+Session           : Interactive from 1
+User Name         : admin.jones
+Domain            : CORP
+Logon Server      : DC01
+Logon Time        : 3/10/2026 8:22:47 AM
+SID               : S-1-5-21-3623811015-3361044348-30300820-1001
+        msv :
+         [00000003] Primary
+         * Username : admin.jones
+         * Domain   : CORP
+         * NTLM     : e19ccf75ee54e06b06a5907af13cef42
+         * SHA1     : 9054b32fbc23a8e2c0a2e54a1d6b3c7f92305e12</code></pre>
+
+    <div class="quiz-block" id="q-hash1">
+      <div class="q-question">Which account is more dangerous if its hash is used in a PtH attack?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-hash1',this,false)"><span class="q-letter">A</span> svc_backup &mdash; it's a service account</div>
+        <div class="q-opt" onclick="checkQuiz('q-hash1',this,true)"><span class="q-letter">B</span> admin.jones &mdash; it's a domain admin with interactive session</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-hash1-correct">Correct! admin.jones has an interactive session and likely domain admin privileges. PtH with this hash enables full lateral movement.</div>
+      <div class="q-feedback fb-wrong" id="q-hash1-wrong">Think again. Look at the username prefix "admin" and the session type "Interactive" &mdash; this suggests a domain admin.</div>
+    </div>
+
+    <div class="quiz-block" id="q-hash2" style="margin-top:12px">
+      <div class="q-question">The NTLM hash <code>aad3b435b51404eeaad3b435b51404ee</code> is special. Why?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-hash2',this,true)"><span class="q-letter">A</span> It's the hash of an empty password</div>
+        <div class="q-opt" onclick="checkQuiz('q-hash2',this,false)"><span class="q-letter">B</span> It's encrypted with AES-256</div>
+        <div class="q-opt" onclick="checkQuiz('q-hash2',this,false)"><span class="q-letter">C</span> It's a Kerberos ticket, not a hash</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-hash2-correct">Correct! This well-known hash corresponds to an empty/blank password. The svc_backup account has no password set &mdash; a critical finding!</div>
+      <div class="q-feedback fb-wrong" id="q-hash2-wrong">This is actually the NTLM hash of an empty password &mdash; a well-known value in forensics. The service account has no password!</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 9: Pass the Ticket Theory -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="9">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Pass the Ticket (PtT)</h1>
+    <p class="slide-subtitle">Stealing and reusing Kerberos tickets for unauthorized access</p>
+
+    <h2>Kerberos Authentication Flow</h2>
+    <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:20px;margin:14px 0;font-size:13px;text-align:center">
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap">
+        <div style="padding:10px 16px;background:var(--bg-surface);border:1px solid var(--border-medium);border-radius:var(--radius-md)">&#128100; <strong>User</strong></div>
+        <span style="color:var(--text-faint)">&#8594; AS-REQ &#8594;</span>
+        <div style="padding:10px 16px;background:rgba(0,120,212,.1);border:1px solid rgba(0,120,212,.3);border-radius:var(--radius-md)">&#127919; <strong>KDC</strong></div>
+        <span style="color:var(--text-faint)">&#8592; TGT &#8592;</span>
+        <div style="padding:10px 16px;background:var(--bg-surface);border:1px solid var(--border-medium);border-radius:var(--radius-md)">&#128100; <strong>User</strong></div>
+        <span style="color:var(--text-faint)">&#8594; TGS-REQ &#8594;</span>
+        <div style="padding:10px 16px;background:rgba(0,120,212,.1);border:1px solid rgba(0,120,212,.3);border-radius:var(--radius-md)">&#127919; <strong>KDC</strong></div>
+        <span style="color:var(--text-faint)">&#8592; TGS &#8592;</span>
+        <div style="padding:10px 16px;background:var(--success-bg);border:1px solid rgba(16,124,16,.3);border-radius:var(--radius-md)">&#128421; <strong>Service</strong></div>
+      </div>
+    </div>
+
+    <h2>Attack Variants</h2>
+    <div class="vs-grid">
+      <div class="vs-col">
+        <h3 style="color:var(--sev-med-text)">&#127380; Golden Ticket</h3>
+        <ul style="font-size:12px">
+          <li>Forged TGT using krbtgt hash</li>
+          <li>Access to <strong>any</strong> service</li>
+          <li>Valid for 10 years by default</li>
+          <li>Requires domain admin access</li>
+        </ul>
+      </div>
+      <div class="vs-col">
+        <h3 style="color:var(--text-tertiary)">&#129352; Silver Ticket</h3>
+        <ul style="font-size:12px">
+          <li>Forged TGS using service hash</li>
+          <li>Access to <strong>specific</strong> service only</li>
+          <li>Harder to detect (no KDC contact)</li>
+          <li>Requires service account hash</li>
+        </ul>
+      </div>
+    </div>
+
+    <pre><code># Export Kerberos tickets
+mimikatz # kerberos::list /export
+
+# Inject stolen ticket
+mimikatz # kerberos::ptt ticket.kirbi</code></pre>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 10: Exercise — PtH vs PtT -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="10">
+  <div class="slide-inner">
+    <span class="slide-label lbl-exercise">&#9881; Exercise 3</span>
+    <h1>PtH vs PtT &mdash; Classify the Attack</h1>
+    <p class="slide-subtitle">Read each scenario and decide: is it Pass the Hash or Pass the Ticket?</p>
+
+    <div class="quiz-block" id="q-pth1">
+      <div class="q-question">Scenario 1: An attacker extracts an NTLM hash from LSASS memory and uses it to authenticate to a file share on another server.</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-pth1',this,true)"><span class="q-letter">A</span> Pass the Hash</div>
+        <div class="q-opt" onclick="checkQuiz('q-pth1',this,false)"><span class="q-letter">B</span> Pass the Ticket</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-pth1-correct">Correct! Using an NTLM hash directly for authentication is PtH.</div>
+      <div class="q-feedback fb-wrong" id="q-pth1-wrong">This uses NTLM hashes, not Kerberos tickets &mdash; it's Pass the Hash.</div>
+    </div>
+
+    <div class="quiz-block" id="q-pth2" style="margin-top:12px">
+      <div class="q-question">Scenario 2: An attacker exports a .kirbi file from memory and injects it into their session to access a SQL server.</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-pth2',this,false)"><span class="q-letter">A</span> Pass the Hash</div>
+        <div class="q-opt" onclick="checkQuiz('q-pth2',this,true)"><span class="q-letter">B</span> Pass the Ticket</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-pth2-correct">Correct! .kirbi files are Kerberos tickets &mdash; this is Pass the Ticket.</div>
+      <div class="q-feedback fb-wrong" id="q-pth2-wrong">.kirbi files are Kerberos ticket exports &mdash; this is a Pass the Ticket attack.</div>
+    </div>
+
+    <div class="quiz-block" id="q-pth3" style="margin-top:12px">
+      <div class="q-question">Scenario 3: An attacker forges a TGT using the krbtgt account hash and gains access to all domain services for the next 10 years.</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-pth3',this,false)"><span class="q-letter">A</span> Pass the Hash</div>
+        <div class="q-opt" onclick="checkQuiz('q-pth3',this,true)"><span class="q-letter">B</span> Pass the Ticket (Golden Ticket)</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-pth3-correct">Correct! A Golden Ticket is a forged TGT &mdash; a specialized Pass the Ticket attack.</div>
+      <div class="q-feedback fb-wrong" id="q-pth3-wrong">Forging a TGT is a Golden Ticket attack, which falls under Pass the Ticket.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 11: LDAP Recon Theory -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="11">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>LDAP Reconnaissance</h1>
+    <p class="slide-subtitle">Using LDAP to enumerate Active Directory objects</p>
+
+    <h2>What Attackers Query</h2>
+    <table class="data-table">
+      <thead><tr><th>Target</th><th>PowerShell Command</th><th>Risk</th></tr></thead>
+      <tbody>
+        <tr><td>All users</td><td><code>Get-ADUser -Filter *</code></td><td><span class="tag tag-orange">High</span></td></tr>
+        <tr><td>Admin accounts</td><td><code>Get-ADGroupMember "Domain Admins"</code></td><td><span class="tag tag-red">Critical</span></td></tr>
+        <tr><td>Service accounts</td><td><code>Get-ADUser -Filter {ServicePrincipalName -ne "$null"}</code></td><td><span class="tag tag-red">Critical</span></td></tr>
+        <tr><td>Computers</td><td><code>Get-ADComputer -Filter *</code></td><td><span class="tag tag-orange">High</span></td></tr>
+        <tr><td>Password policy</td><td><code>Get-ADDefaultDomainPasswordPolicy</code></td><td><span class="tag tag-green">Medium</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Password Spraying via LDAP</h2>
+    <pre><code># Attempt common passwords against all enumerated users
+$users = Get-Content users.txt
+foreach ($user in $users) {
+    $cred = New-Object PSCredential $user, (ConvertTo-SecureString "Spring2026!" -AsPlainText -Force)
+    $result = Connect-LDAP -Server DC01 -Credential $cred
+    if ($result) { Write-Host "Valid: $user" }
+}</code></pre>
+
+    <div class="info-box warn">
+      <strong>Detection:</strong> Monitor for bulk LDAP queries, especially from non-admin workstations. Alert on PowerShell commands containing <code>Get-ADUser</code>, <code>Get-ADGroup</code>, or LDAP filter strings.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 12: Exercise — LDAP Query Builder -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="12">
+  <div class="slide-inner">
+    <span class="slide-label lbl-exercise">&#9881; Exercise 4</span>
+    <h1>LDAP Query Challenge</h1>
+    <p class="slide-subtitle">Match each reconnaissance goal with the correct PowerShell command</p>
+
+    <div class="quiz-block" id="q-ldap1">
+      <div class="q-question">Goal: List all user accounts in the domain</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-ldap1',this,false)"><span class="q-letter">A</span> <code>Get-ADComputer -Filter *</code></div>
+        <div class="q-opt" onclick="checkQuiz('q-ldap1',this,true)"><span class="q-letter">B</span> <code>Get-ADUser -Filter *</code></div>
+        <div class="q-opt" onclick="checkQuiz('q-ldap1',this,false)"><span class="q-letter">C</span> <code>Get-ADGroup -Filter *</code></div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-ldap1-correct">Correct! <code>Get-ADUser -Filter *</code> enumerates all user accounts.</div>
+      <div class="q-feedback fb-wrong" id="q-ldap1-wrong">The correct command is <code>Get-ADUser -Filter *</code> for listing users.</div>
+    </div>
+
+    <div class="quiz-block" id="q-ldap2" style="margin-top:12px">
+      <div class="q-question">Goal: Find accounts that are targets for Kerberoasting</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-ldap2',this,false)"><span class="q-letter">A</span> <code>Get-ADUser -Filter {Enabled -eq $true}</code></div>
+        <div class="q-opt" onclick="checkQuiz('q-ldap2',this,false)"><span class="q-letter">B</span> <code>Get-ADUser -Filter {PasswordNeverExpires -eq $true}</code></div>
+        <div class="q-opt" onclick="checkQuiz('q-ldap2',this,true)"><span class="q-letter">C</span> <code>Get-ADUser -Filter {ServicePrincipalName -ne "$null"}</code></div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-ldap2-correct">Correct! Accounts with SPNs set are targets for Kerberoasting &mdash; their TGS tickets can be requested and cracked offline.</div>
+      <div class="q-feedback fb-wrong" id="q-ldap2-wrong">Kerberoasting targets accounts with ServicePrincipalName (SPN) set, so the filter checks for non-null SPNs.</div>
+    </div>
+
+    <div class="quiz-block" id="q-ldap3" style="margin-top:12px">
+      <div class="q-question">Goal: Identify members of the Domain Admins group</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-ldap3',this,true)"><span class="q-letter">A</span> <code>Get-ADGroupMember "Domain Admins"</code></div>
+        <div class="q-opt" onclick="checkQuiz('q-ldap3',this,false)"><span class="q-letter">B</span> <code>Get-ADUser -LDAPFilter "(isAdmin=TRUE)"</code></div>
+        <div class="q-opt" onclick="checkQuiz('q-ldap3',this,false)"><span class="q-letter">C</span> <code>Get-ADDefaultDomainPasswordPolicy</code></div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-ldap3-correct">Correct! <code>Get-ADGroupMember</code> lists all members of the specified group.</div>
+      <div class="q-feedback fb-wrong" id="q-ldap3-wrong">The correct command is <code>Get-ADGroupMember "Domain Admins"</code> to enumerate group members.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 13: Brute Force Theory -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="13">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Brute Force Attacks</h1>
+    <p class="slide-subtitle">Systematically guessing credentials until access is granted</p>
+
+    <h2>Attack Types</h2>
+    <div class="card-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="g-card">
+        <div class="g-icon">&#128290;</div>
+        <div class="g-title">Simple Brute Force</div>
+        <div class="g-text">Try every possible combination: a, b, c... aa, ab, ac... Very slow but guaranteed eventually.</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128214;</div>
+        <div class="g-title">Dictionary Attack</div>
+        <div class="g-text">Use a wordlist of common passwords. Fast but limited to known passwords.</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128260;</div>
+        <div class="g-title">Hybrid Attack</div>
+        <div class="g-text">Dictionary + mutations: Password1, P@ssword, Password2026! Balances speed and coverage.</div>
+      </div>
+    </div>
+
+    <h2>Hydra &mdash; The Go-To Brute Force Tool</h2>
+    <pre><code># Basic HTTP POST brute force
+hydra -l admin -P /usr/share/wordlists/rockyou.txt \
+  192.168.1.100 http-post-form \
+  "/login:username=^USER^&password=^PASS^:Invalid credentials"
+
+# SSH brute force
+hydra -L users.txt -P passwords.txt ssh://192.168.1.100
+
+# FTP brute force with rate limiting
+hydra -l admin -P wordlist.txt -t 4 ftp://192.168.1.100</code></pre>
+
+    <h2>Prevention</h2>
+    <ul>
+      <li><strong>Account lockout</strong> after 5 failed attempts</li>
+      <li><strong>Rate limiting</strong> &mdash; max 10 attempts per minute</li>
+      <li><strong>MFA</strong> &mdash; password alone is not enough</li>
+      <li><strong>IDS/IPS</strong> &mdash; detect and block attack patterns</li>
+      <li><strong>Strong password policies</strong> &mdash; minimum 12 characters, complexity rules</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 14: Exercise — Build a Hydra Command -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="14">
+  <div class="slide-inner">
+    <span class="slide-label lbl-exercise">&#9881; Exercise 5</span>
+    <h1>Build the Hydra Command</h1>
+    <p class="slide-subtitle">Given the scenario, construct the correct Hydra command</p>
+
+    <div class="info-box lab-box">
+      <strong>Scenario:</strong> You're pentesting a web application at <code>10.10.10.50</code>. The login page is at <code>/admin/login.php</code>. It uses a POST form with fields <code>user</code> and <code>pass</code>. A failed login shows the text "Access denied". You have a username <code>administrator</code> and a password list at <code>/opt/wordlists/common.txt</code>.
+    </div>
+
+    <div class="lab-input-group">
+      <label>Your Hydra Command</label>
+      <input type="text" class="lab-input" id="hydra-input" placeholder="hydra -l ... -P ... ..." style="font-size:12px">
+    </div>
+
+    <button class="btn btn-primary" onclick="checkHydra()" style="margin-top:8px">Check Command</button>
+    <button class="btn btn-outline" onclick="showHydraHint()" style="margin-top:8px">Show Hint</button>
+
+    <div class="result-box" id="hydra-result" style="display:none"></div>
+
+    <div class="info-box info" id="hydra-hint" style="display:none;margin-top:12px">
+      <strong>Hint:</strong> The format is: <code>hydra -l &lt;user&gt; -P &lt;wordlist&gt; &lt;target&gt; http-post-form "/path:user=^USER^&amp;pass=^PASS^:failure_message"</code>
+    </div>
+
+    <div style="margin-top:20px">
+      <h3>Reference: Hydra Flag Cheat Sheet</h3>
+      <table class="data-table" style="margin-top:8px">
+        <thead><tr><th>Flag</th><th>Description</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><code>-l</code></td><td>Single username</td><td><code>-l admin</code></td></tr>
+          <tr><td><code>-L</code></td><td>Username list file</td><td><code>-L users.txt</code></td></tr>
+          <tr><td><code>-p</code></td><td>Single password</td><td><code>-p secret</code></td></tr>
+          <tr><td><code>-P</code></td><td>Password list file</td><td><code>-P wordlist.txt</code></td></tr>
+          <tr><td><code>-t</code></td><td>Number of threads</td><td><code>-t 16</code></td></tr>
+          <tr><td><code>-s</code></td><td>Custom port</td><td><code>-s 8080</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 15: Mini Lab — Password Strength Analyzer -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="15">
+  <div class="slide-inner">
+    <span class="slide-label lbl-lab">&#128300; Mini-Lab</span>
+    <h1>Password Strength Analyzer</h1>
+    <p class="slide-subtitle">Estimate how long a brute force attack would take to crack each password</p>
+
+    <div class="lab-input-group">
+      <label>Enter a password to analyze</label>
+      <input type="text" class="lab-input" id="pwd-input" placeholder="Type a password..." oninput="analyzePassword(this.value)">
+    </div>
+
+    <div id="pwd-analysis" style="margin-top:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="pwd-stats">
+        <div class="g-card">
+          <div class="g-title">Length</div>
+          <div class="g-text" id="pwd-len" style="font-family:var(--font-mono);font-size:18px;color:var(--text-primary)">-</div>
+        </div>
+        <div class="g-card">
+          <div class="g-title">Character Space</div>
+          <div class="g-text" id="pwd-space" style="font-family:var(--font-mono);font-size:18px;color:var(--text-primary)">-</div>
+        </div>
+        <div class="g-card">
+          <div class="g-title">Possible Combinations</div>
+          <div class="g-text" id="pwd-combos" style="font-family:var(--font-mono);font-size:18px;color:var(--text-primary)">-</div>
+        </div>
+        <div class="g-card">
+          <div class="g-title">Estimated Crack Time</div>
+          <div class="g-text" id="pwd-time" style="font-family:var(--font-mono);font-size:18px;color:var(--text-primary)">-</div>
+        </div>
+      </div>
+
+      <div id="pwd-bar-wrap" style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--text-muted);font-weight:600">STRENGTH</span>
+          <span style="font-size:11px;color:var(--text-tertiary)" id="pwd-strength-label">-</span>
+        </div>
+        <div style="height:6px;background:var(--border-medium);border-radius:3px;overflow:hidden">
+          <div id="pwd-bar" style="height:100%;width:0%;border-radius:3px;transition:all .3s ease"></div>
+        </div>
+      </div>
+
+      <div class="info-box info" style="margin-top:16px">
+        <strong>Assumptions:</strong> Brute force at 10 billion guesses/second (high-end GPU cluster). Real-world attacks may use dictionaries + rules first, which is much faster against weak passwords.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 16: Exercise — Attack Surface Matching -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="16">
+  <div class="slide-inner">
+    <span class="slide-label lbl-exercise">&#9881; Exercise 6</span>
+    <h1>Match Attack to Mitigation</h1>
+    <p class="slide-subtitle">For each attack, select the BEST primary mitigation</p>
+
+    <div class="quiz-block" id="q-mit1">
+      <div class="q-question">Typosquatting attack on your company's domain</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-mit1',this,false)"><span class="q-letter">A</span> Enable Credential Guard</div>
+        <div class="q-opt" onclick="checkQuiz('q-mit1',this,true)"><span class="q-letter">B</span> Register common misspellings of your domain proactively</div>
+        <div class="q-opt" onclick="checkQuiz('q-mit1',this,false)"><span class="q-letter">C</span> Implement account lockout policies</div>
+        <div class="q-opt" onclick="checkQuiz('q-mit1',this,false)"><span class="q-letter">D</span> Use Kerberos instead of NTLM</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-mit1-correct">Correct! Proactively registering misspelled variants is the best defense against typosquatting.</div>
+      <div class="q-feedback fb-wrong" id="q-mit1-wrong">The best mitigation for typosquatting is proactive registration of common misspellings of your domain.</div>
+    </div>
+
+    <div class="quiz-block" id="q-mit2" style="margin-top:12px">
+      <div class="q-question">Pass the Hash attack in your Windows domain</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-mit2',this,false)"><span class="q-letter">A</span> Register similar domain names</div>
+        <div class="q-opt" onclick="checkQuiz('q-mit2',this,false)"><span class="q-letter">B</span> Enable DNSSEC</div>
+        <div class="q-opt" onclick="checkQuiz('q-mit2',this,true)"><span class="q-letter">C</span> Enable Credential Guard and prefer Kerberos over NTLM</div>
+        <div class="q-opt" onclick="checkQuiz('q-mit2',this,false)"><span class="q-letter">D</span> Set up WHOIS monitoring</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-mit2-correct">Correct! Credential Guard protects NTLM hashes in memory, and Kerberos is less susceptible to PtH.</div>
+      <div class="q-feedback fb-wrong" id="q-mit2-wrong">PtH exploits NTLM hashes in memory. Credential Guard and Kerberos preference are the key mitigations.</div>
+    </div>
+
+    <div class="quiz-block" id="q-mit3" style="margin-top:12px">
+      <div class="q-question">Brute force attack against your SSH service</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-mit3',this,false)"><span class="q-letter">A</span> Enable domain locking</div>
+        <div class="q-opt" onclick="checkQuiz('q-mit3',this,false)"><span class="q-letter">B</span> Use LDAP for authentication</div>
+        <div class="q-opt" onclick="checkQuiz('q-mit3',this,true)"><span class="q-letter">C</span> Use key-based authentication and fail2ban</div>
+        <div class="q-opt" onclick="checkQuiz('q-mit3',this,false)"><span class="q-letter">D</span> Register the domain with ICANN</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-mit3-correct">Correct! SSH key auth eliminates password brute force entirely, and fail2ban blocks repeated attempts.</div>
+      <div class="q-feedback fb-wrong" id="q-mit3-wrong">For SSH brute force, key-based authentication removes passwords from the equation, and fail2ban auto-blocks attackers.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 17: Mini Lab — Detect the Attack in Logs -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="17">
+  <div class="slide-inner">
+    <span class="slide-label lbl-lab">&#128300; Mini-Lab</span>
+    <h1>Detect the Attack in Logs</h1>
+    <p class="slide-subtitle">Analyze these Windows Event Log entries and identify the attack type</p>
+
+    <pre style="font-size:10.5px"><code>EventID: 4625 | Time: 08:15:01 | User: admin    | Source: 10.0.0.55 | Status: 0xC000006D
+EventID: 4625 | Time: 08:15:01 | User: admin    | Source: 10.0.0.55 | Status: 0xC000006D
+EventID: 4625 | Time: 08:15:02 | User: admin    | Source: 10.0.0.55 | Status: 0xC000006D
+EventID: 4625 | Time: 08:15:02 | User: admin    | Source: 10.0.0.55 | Status: 0xC000006D
+EventID: 4625 | Time: 08:15:03 | User: admin    | Source: 10.0.0.55 | Status: 0xC000006D
+EventID: 4624 | Time: 08:15:03 | User: admin    | Source: 10.0.0.55 | LogonType: 10
+---
+EventID: 4769 | Time: 09:22:14 | User: svc_sql  | Service: MSSQLSvc/DB01 | EncType: 0x17
+EventID: 4769 | Time: 09:22:15 | User: svc_http | Service: HTTP/WEB01   | EncType: 0x17
+EventID: 4769 | Time: 09:22:15 | User: svc_iis  | Service: HTTP/IIS02   | EncType: 0x17
+---
+EventID: 4625 | Time: 10:05:00 | User: john.doe   | Source: 10.0.0.55 | Status: 0xC000006D
+EventID: 4625 | Time: 10:05:01 | User: jane.smith  | Source: 10.0.0.55 | Status: 0xC000006D
+EventID: 4625 | Time: 10:05:01 | User: bob.wilson   | Source: 10.0.0.55 | Status: 0xC000006D
+EventID: 4625 | Time: 10:05:02 | User: alice.chen   | Source: 10.0.0.55 | Status: 0xC000006D
+EventID: 4624 | Time: 10:05:02 | User: alice.chen   | Source: 10.0.0.55 | LogonType: 3</code></pre>
+
+    <div class="quiz-block" id="q-log1">
+      <div class="q-question">Block 1 (08:15): Multiple 4625 events for the same user "admin" followed by a successful 4624. What attack is this?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-log1',this,true)"><span class="q-letter">A</span> Brute Force / Dictionary Attack</div>
+        <div class="q-opt" onclick="checkQuiz('q-log1',this,false)"><span class="q-letter">B</span> Pass the Hash</div>
+        <div class="q-opt" onclick="checkQuiz('q-log1',this,false)"><span class="q-letter">C</span> Kerberoasting</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-log1-correct">Correct! Multiple failed logins (4625) for the same user from the same source, then success = brute force.</div>
+      <div class="q-feedback fb-wrong" id="q-log1-wrong">Multiple 4625 (failed login) for the same user followed by 4624 (success) = brute force attack.</div>
+    </div>
+
+    <div class="quiz-block" id="q-log2" style="margin-top:12px">
+      <div class="q-question">Block 2 (09:22): Multiple 4769 events with EncType 0x17 for service accounts. What attack is this?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-log2',this,false)"><span class="q-letter">A</span> Password Spraying</div>
+        <div class="q-opt" onclick="checkQuiz('q-log2',this,true)"><span class="q-letter">B</span> Kerberoasting (service ticket requests for offline cracking)</div>
+        <div class="q-opt" onclick="checkQuiz('q-log2',this,false)"><span class="q-letter">C</span> Domain Hijacking</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-log2-correct">Correct! 4769 events with RC4 encryption (0x17) targeting service accounts = Kerberoasting.</div>
+      <div class="q-feedback fb-wrong" id="q-log2-wrong">Event 4769 = Kerberos Service Ticket requested. Multiple for service accounts with weak encryption (0x17=RC4) = Kerberoasting.</div>
+    </div>
+
+    <div class="quiz-block" id="q-log3" style="margin-top:12px">
+      <div class="q-question">Block 3 (10:05): 4625 events for DIFFERENT users from the same source, one per user. What attack is this?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q-log3',this,false)"><span class="q-letter">A</span> Brute Force</div>
+        <div class="q-opt" onclick="checkQuiz('q-log3',this,true)"><span class="q-letter">B</span> Password Spraying (one password tried across many users)</div>
+        <div class="q-opt" onclick="checkQuiz('q-log3',this,false)"><span class="q-letter">C</span> Pass the Ticket</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q-log3-correct">Correct! One attempt per user from the same source = password spraying (trying the same password against many accounts).</div>
+      <div class="q-feedback fb-wrong" id="q-log3-wrong">One failed attempt per different user = password spraying. The attacker tries one common password across many accounts to avoid lockout.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 18: Lab Setup — Kerberos Attack Chain -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="18">
+  <div class="slide-inner">
+    <span class="slide-label lbl-lab">&#128300; Lab Preview</span>
+    <h1>Attack Chain: From Recon to Domain Admin</h1>
+    <p class="slide-subtitle">This is the attack path you'll practice in the Kerberos lab</p>
+
+    <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:24px;margin:14px 0">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(0,120,212,.15);border:1px solid rgba(0,120,212,.3);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent-blue-light);flex-shrink:0;font-size:13px">1</div>
+          <div><strong style="color:var(--text-primary)">LDAP Recon</strong><br><span style="font-size:12px;color:var(--text-tertiary)">Enumerate users, groups, and SPNs via <code>Get-ADUser</code></span></div>
+        </div>
+        <div style="margin-left:17px;border-left:2px solid var(--border-medium);height:12px"></div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,140,0,.15);border:1px solid rgba(255,140,0,.3);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--sev-med-text);flex-shrink:0;font-size:13px">2</div>
+          <div><strong style="color:var(--text-primary)">Kerberoasting</strong><br><span style="font-size:12px;color:var(--text-tertiary)">Request TGS tickets for service accounts, crack offline with hashcat</span></div>
+        </div>
+        <div style="margin-left:17px;border-left:2px solid var(--border-medium);height:12px"></div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(209,52,56,.15);border:1px solid rgba(209,52,56,.3);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--sev-high-text);flex-shrink:0;font-size:13px">3</div>
+          <div><strong style="color:var(--text-primary)">Credential Access</strong><br><span style="font-size:12px;color:var(--text-tertiary)">Use cracked password to dump hashes via Mimikatz <code>sekurlsa::logonpasswords</code></span></div>
+        </div>
+        <div style="margin-left:17px;border-left:2px solid var(--border-medium);height:12px"></div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(209,52,56,.15);border:1px solid rgba(209,52,56,.3);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--sev-high-text);flex-shrink:0;font-size:13px">4</div>
+          <div><strong style="color:var(--text-primary)">Pass the Hash / Ticket</strong><br><span style="font-size:12px;color:var(--text-tertiary)">Lateral movement to DC using PtH or inject forged tickets</span></div>
+        </div>
+        <div style="margin-left:17px;border-left:2px solid var(--border-medium);height:12px"></div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(209,52,56,.15);border:1px solid rgba(209,52,56,.3);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--sev-high-text);flex-shrink:0;font-size:13px">5</div>
+          <div><strong style="color:var(--text-primary)">Domain Compromise</strong><br><span style="font-size:12px;color:var(--text-tertiary)">Full domain admin access achieved</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box danger">
+      <strong>Remember:</strong> These techniques should ONLY be used in authorized penetration testing engagements or lab environments. Unauthorized use is illegal.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 19: Comprehensive Quiz -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="19">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Final Quiz</span>
+    <h1>Comprehensive Knowledge Check</h1>
+    <p class="slide-subtitle">5 questions covering all topics from today</p>
+
+    <div class="quiz-block" id="qf1">
+      <div class="q-question">1. Which Windows feature protects NTLM hashes in memory from being extracted by tools like Mimikatz?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('qf1',this,false)"><span class="q-letter">A</span> Windows Defender</div>
+        <div class="q-opt" onclick="checkQuiz('qf1',this,true)"><span class="q-letter">B</span> Credential Guard</div>
+        <div class="q-opt" onclick="checkQuiz('qf1',this,false)"><span class="q-letter">C</span> BitLocker</div>
+        <div class="q-opt" onclick="checkQuiz('qf1',this,false)"><span class="q-letter">D</span> AppLocker</div>
+      </div>
+      <div class="q-feedback fb-correct" id="qf1-correct">Correct! Credential Guard uses virtualization-based security to isolate NTLM hashes from the OS.</div>
+      <div class="q-feedback fb-wrong" id="qf1-wrong">Credential Guard is the answer &mdash; it isolates credential hashes using VBS.</div>
+    </div>
+
+    <div class="quiz-block" id="qf2" style="margin-top:12px">
+      <div class="q-question">2. What is DNSSEC primarily designed to prevent?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('qf2',this,false)"><span class="q-letter">A</span> Brute force attacks on DNS servers</div>
+        <div class="q-opt" onclick="checkQuiz('qf2',this,true)"><span class="q-letter">B</span> DNS spoofing and cache poisoning</div>
+        <div class="q-opt" onclick="checkQuiz('qf2',this,false)"><span class="q-letter">C</span> LDAP injection attacks</div>
+        <div class="q-opt" onclick="checkQuiz('qf2',this,false)"><span class="q-letter">D</span> Password spraying via DNS</div>
+      </div>
+      <div class="q-feedback fb-correct" id="qf2-correct">Correct! DNSSEC signs DNS records cryptographically to prevent spoofing and cache poisoning.</div>
+      <div class="q-feedback fb-wrong" id="qf2-wrong">DNSSEC prevents DNS spoofing and cache poisoning through cryptographic signing of records.</div>
+    </div>
+
+    <div class="quiz-block" id="qf3" style="margin-top:12px">
+      <div class="q-question">3. In Kerberos, what does TGT stand for?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('qf3',this,false)"><span class="q-letter">A</span> Temporary Grant Token</div>
+        <div class="q-opt" onclick="checkQuiz('qf3',this,true)"><span class="q-letter">B</span> Ticket Granting Ticket</div>
+        <div class="q-opt" onclick="checkQuiz('qf3',this,false)"><span class="q-letter">C</span> Transport Gateway Tunnel</div>
+        <div class="q-opt" onclick="checkQuiz('qf3',this,false)"><span class="q-letter">D</span> Trusted Group Tag</div>
+      </div>
+      <div class="q-feedback fb-correct" id="qf3-correct">Correct! TGT = Ticket Granting Ticket, issued by the KDC during initial authentication.</div>
+      <div class="q-feedback fb-wrong" id="qf3-wrong">TGT stands for Ticket Granting Ticket &mdash; the initial ticket issued by the Key Distribution Center.</div>
+    </div>
+
+    <div class="quiz-block" id="qf4" style="margin-top:12px">
+      <div class="q-question">4. An attacker tries one common password against 500 user accounts. This is:</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('qf4',this,false)"><span class="q-letter">A</span> Simple brute force</div>
+        <div class="q-opt" onclick="checkQuiz('qf4',this,false)"><span class="q-letter">B</span> Dictionary attack</div>
+        <div class="q-opt" onclick="checkQuiz('qf4',this,true)"><span class="q-letter">C</span> Password spraying</div>
+        <div class="q-opt" onclick="checkQuiz('qf4',this,false)"><span class="q-letter">D</span> Rainbow table attack</div>
+      </div>
+      <div class="q-feedback fb-correct" id="qf4-correct">Correct! Password spraying = trying one password across many accounts to avoid lockout.</div>
+      <div class="q-feedback fb-wrong" id="qf4-wrong">One password against many accounts = password spraying. It avoids account lockout policies.</div>
+    </div>
+
+    <div class="quiz-block" id="qf5" style="margin-top:12px">
+      <div class="q-question">5. Which Mimikatz command is used to inject a stolen Kerberos ticket into the current session?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('qf5',this,false)"><span class="q-letter">A</span> <code>sekurlsa::logonpasswords</code></div>
+        <div class="q-opt" onclick="checkQuiz('qf5',this,false)"><span class="q-letter">B</span> <code>kerberos::list /export</code></div>
+        <div class="q-opt" onclick="checkQuiz('qf5',this,true)"><span class="q-letter">C</span> <code>kerberos::ptt &lt;ticket&gt;</code></div>
+        <div class="q-opt" onclick="checkQuiz('qf5',this,false)"><span class="q-letter">D</span> <code>lsadump::dcsync</code></div>
+      </div>
+      <div class="q-feedback fb-correct" id="qf5-correct">Correct! <code>kerberos::ptt</code> (Pass The Ticket) injects a ticket into the current session.</div>
+      <div class="q-feedback fb-wrong" id="qf5-wrong"><code>kerberos::ptt</code> = Pass The Ticket. It injects a .kirbi ticket file into the current logon session.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 20: Summary & Next Steps -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="20">
+  <div class="slide-inner">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">&#127942;</div>
+      <h1 style="font-size:28px;margin-bottom:8px">Great Work Today!</h1>
+      <p class="slide-subtitle" style="font-size:14px;max-width:500px">You've covered domain attacks, credential exploitation, and Active Directory threats</p>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px;max-width:600px;width:100%">
+        <div class="g-card" style="text-align:center">
+          <div style="font-size:28px;margin-bottom:6px">&#127760;</div>
+          <div class="g-title">Domain Attacks</div>
+          <div class="g-text">Typosquatting, Hijacking, Prevention</div>
+        </div>
+        <div class="g-card" style="text-align:center">
+          <div style="font-size:28px;margin-bottom:6px">&#128272;</div>
+          <div class="g-title">Credential Attacks</div>
+          <div class="g-text">PtH, PtT, NTLM, Kerberos</div>
+        </div>
+        <div class="g-card" style="text-align:center">
+          <div style="font-size:28px;margin-bottom:6px">&#128295;</div>
+          <div class="g-title">Offensive Tools</div>
+          <div class="g-text">Mimikatz, Hydra, PowerShell</div>
+        </div>
+      </div>
+
+      <div style="margin-top:28px;text-align:left;max-width:500px;width:100%">
+        <h3 style="color:var(--accent-blue-light);font-size:12px;margin-bottom:10px">UP NEXT</h3>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md)">
+            <span class="tag tag-blue">Lab</span>
+            <span style="font-size:13px;color:var(--text-primary);font-weight:500">Hydra Brute Force Lab</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md)">
+            <span class="tag tag-red">Lab</span>
+            <span style="font-size:13px;color:var(--text-primary);font-weight:500">Attacking Kerberos Lab</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /slide-viewport -->
+
+<!-- ═══ NAVIGATION ═══ -->
+<div class="nav-bar">
+  <button class="nav-btn" id="btn-prev" onclick="prevSlide()">&#8592; Prev</button>
+  <div class="nav-dots" id="nav-dots"></div>
+  <button class="nav-btn" id="btn-next" onclick="nextSlide()">Next &#8594;</button>
+</div>
+
+<!-- ═══ STATUSBAR ═══ -->
+<div class="statusbar">
+  <span class="sb-item"><span class="sb-dot"></span> Exercises</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">&#128737; Domain Attacks</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">W4D2</span>
+  <span class="sb-right">
+    <span class="sb-item" id="sb-slide">Slide 1 / 20</span>
+    <span class="sb-sep"></span>
+    <span class="sb-item">10.03.2026</span>
+  </span>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ── Slide Navigation ──────────────────────────────────────
+const TOTAL = 20;
+let current = 1;
+
+function showSlide(n) {
+  if (n < 1 || n > TOTAL) return;
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  document.querySelector(`[data-slide="${n}"]`).classList.add('active');
+  current = n;
+  updateNav();
+}
+
+function nextSlide() { showSlide(current + 1) }
+function prevSlide() { showSlide(current - 1) }
+
+function updateNav() {
+  document.getElementById('slide-counter').textContent = current + ' / ' + TOTAL;
+  document.getElementById('sb-slide').textContent = 'Slide ' + current + ' / ' + TOTAL;
+  document.getElementById('btn-prev').disabled = current === 1;
+  document.getElementById('btn-next').disabled = current === TOTAL;
+
+  document.querySelectorAll('.nav-dot').forEach((d, i) => {
+    d.classList.toggle('active', i + 1 === current);
+  });
+}
+
+// Build dots
+const dotsEl = document.getElementById('nav-dots');
+for (let i = 1; i <= TOTAL; i++) {
+  const dot = document.createElement('div');
+  dot.className = 'nav-dot' + (i === 1 ? ' active' : '');
+  dot.onclick = () => showSlide(i);
+  dotsEl.appendChild(dot);
+}
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+});
+
+// ── Quiz Logic ────────────────────────────────────────────
+function checkQuiz(id, opt, correct) {
+  const block = document.getElementById(id);
+  if (block.dataset.answered) return;
+  block.dataset.answered = 'true';
+
+  opt.classList.add(correct ? 'correct' : 'wrong');
+  if (!correct) {
+    // highlight the correct one
+    block.querySelectorAll('.q-opt').forEach(o => {
+      if (o !== opt && o.onclick.toString().includes('true')) {
+        // We can't easily detect, so just show feedback
+      }
+    });
+  }
+
+  const fb = document.getElementById(id + (correct ? '-correct' : '-wrong'));
+  if (fb) { fb.classList.add('show') }
+}
+
+// ── Typosquatting Exercise ────────────────────────────────
+const typoDomains = [
+  { domain: 'google.com', legit: true },
+  { domain: 'gooogle.com', legit: false },
+  { domain: 'amazon.com', legit: true },
+  { domain: 'arnazon.com', legit: false },
+  { domain: 'paypa1.com', legit: false },
+  { domain: 'microsoft.com', legit: true },
+  { domain: 'microsofft.com', legit: false },
+  { domain: 'facebook.com', legit: true },
+  { domain: 'faceb00k.com', legit: false },
+  { domain: 'netflix.com', legit: true },
+  { domain: 'netfliix.com', legit: false },
+  { domain: 'github.com', legit: true },
+];
+
+function initTypoExercise() {
+  const container = document.getElementById('typo-exercise');
+  if (!container) return;
+
+  // Shuffle
+  const shuffled = [...typoDomains].sort(() => Math.random() - 0.5);
+  let answered = 0;
+  let correctCount = 0;
+
+  container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">' +
+    shuffled.map((d, i) => `
+      <div class="domain-highlight unknown" id="typo-${i}" style="cursor:pointer;padding:10px 14px;text-align:center;transition:all .2s" data-legit="${d.legit}" onclick="classifyDomain(this)">
+        <div style="font-size:13px;font-weight:600">${d.domain}</div>
+        <div style="font-size:10px;margin-top:4px;color:var(--text-faint)">Click to classify</div>
+      </div>
+    `).join('') + '</div>';
+}
+
+function classifyDomain(el) {
+  if (el.dataset.classified) return;
+
+  const isLegit = el.dataset.legit === 'true';
+
+  // Show two buttons
+  el.innerHTML = `
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">${el.querySelector('div').textContent || el.textContent.trim().split('\n')[0]}</div>
+    <div style="display:flex;gap:6px;justify-content:center">
+      <button class="btn btn-success" style="font-size:10px;padding:4px 10px" onclick="event.stopPropagation();answerTypo(this.closest('.domain-highlight'),true)">Legit</button>
+      <button class="btn" style="font-size:10px;padding:4px 10px;background:var(--sev-high);color:#fff" onclick="event.stopPropagation();answerTypo(this.closest('.domain-highlight'),false)">Typosquat</button>
+    </div>
+  `;
+}
+
+let typoCorrect = 0;
+let typoTotal = 0;
+
+function answerTypo(el, guessedLegit) {
+  if (el.dataset.classified) return;
+  el.dataset.classified = 'true';
+
+  const isLegit = el.dataset.legit === 'true';
+  const correct = guessedLegit === isLegit;
+
+  typoTotal++;
+  if (correct) typoCorrect++;
+
+  el.className = 'domain-highlight ' + (correct ? (isLegit ? 'legit' : 'typo') : (isLegit ? 'typo' : 'legit'));
+  el.style.cursor = 'default';
+
+  const domain = el.querySelector('div').textContent;
+  el.innerHTML = `
+    <div style="font-size:13px;font-weight:600">${domain}</div>
+    <div style="font-size:10px;margin-top:2px">${correct ? '&#10003; Correct' : '&#10007; Wrong'} &mdash; ${isLegit ? 'Legitimate' : 'Typosquat'}</div>
+  `;
+
+  document.getElementById('typo-score').textContent = `Score: ${typoCorrect} / ${typoTotal} correct`;
+}
+
+initTypoExercise();
+
+// ── Hydra Command Check ───────────────────────────────────
+function checkHydra() {
+  const input = document.getElementById('hydra-input').value.trim().toLowerCase();
+  const result = document.getElementById('hydra-result');
+  result.style.display = 'block';
+
+  const checks = [
+    { test: input.includes('hydra'), msg: 'Starts with hydra' },
+    { test: input.includes('-l') && input.includes('administrator'), msg: '-l administrator (single user)' },
+    { test: input.includes('-p') && input.includes('/opt/wordlists/common.txt'), msg: '-P /opt/wordlists/common.txt (password list)' },
+    { test: input.includes('10.10.10.50'), msg: 'Target: 10.10.10.50' },
+    { test: input.includes('http-post-form'), msg: 'Protocol: http-post-form' },
+    { test: input.includes('/admin/login.php'), msg: 'Path: /admin/login.php' },
+    { test: input.includes('^user^') || input.includes('^USER^'), msg: '^USER^ placeholder' },
+    { test: input.includes('^pass^') || input.includes('^PASS^'), msg: '^PASS^ placeholder' },
+    { test: input.includes('access denied'), msg: 'Failure string: Access denied' },
+  ];
+
+  const passed = checks.filter(c => c.test).length;
+  const total = checks.length;
+
+  let html = `Score: ${passed}/${total} checks passed\n\n`;
+  checks.forEach(c => {
+    html += (c.test ? '&#10003;' : '&#10007;') + ' ' + c.msg + '\n';
+  });
+
+  if (passed === total) {
+    html += '\n&#127881; Perfect! Your command is correct.';
+    result.style.borderColor = 'var(--success)';
+  } else if (passed >= 6) {
+    html += '\n&#128170; Almost there! Check the missing elements.';
+    result.style.borderColor = 'var(--sev-med)';
+  } else {
+    html += '\n\nExpected:\nhydra -l administrator -P /opt/wordlists/common.txt 10.10.10.50 http-post-form "/admin/login.php:user=^USER^&pass=^PASS^:Access denied"';
+    result.style.borderColor = 'var(--sev-high)';
+  }
+
+  result.innerHTML = html;
+}
+
+function showHydraHint() {
+  document.getElementById('hydra-hint').style.display = 'block';
+}
+
+// ── Password Strength Analyzer ────────────────────────────
+function analyzePassword(pwd) {
+  if (!pwd) {
+    document.getElementById('pwd-len').textContent = '-';
+    document.getElementById('pwd-space').textContent = '-';
+    document.getElementById('pwd-combos').textContent = '-';
+    document.getElementById('pwd-time').textContent = '-';
+    document.getElementById('pwd-strength-label').textContent = '-';
+    document.getElementById('pwd-bar').style.width = '0%';
+    return;
+  }
+
+  const len = pwd.length;
+  let space = 0;
+  if (/[a-z]/.test(pwd)) space += 26;
+  if (/[A-Z]/.test(pwd)) space += 26;
+  if (/[0-9]/.test(pwd)) space += 10;
+  if (/[^a-zA-Z0-9]/.test(pwd)) space += 33;
+  if (space === 0) space = 26;
+
+  const combos = Math.pow(space, len);
+  const guessesPerSec = 1e10; // 10 billion
+  const seconds = combos / guessesPerSec;
+
+  document.getElementById('pwd-len').textContent = len;
+  document.getElementById('pwd-space').textContent = space + ' chars';
+  document.getElementById('pwd-combos').textContent = combos > 1e15 ? combos.toExponential(1) : combos.toLocaleString();
+  document.getElementById('pwd-time').textContent = formatTime(seconds);
+
+  // Strength rating
+  let pct, label, color;
+  if (seconds < 1) { pct = 5; label = 'Instant'; color = 'var(--sev-high)'; }
+  else if (seconds < 3600) { pct = 15; label = 'Very Weak'; color = 'var(--sev-high)'; }
+  else if (seconds < 86400 * 30) { pct = 30; label = 'Weak'; color = 'var(--sev-med)'; }
+  else if (seconds < 86400 * 365) { pct = 50; label = 'Fair'; color = 'var(--sev-low)'; }
+  else if (seconds < 86400 * 365 * 100) { pct = 70; label = 'Good'; color = 'var(--accent-blue)'; }
+  else if (seconds < 86400 * 365 * 1e6) { pct = 85; label = 'Strong'; color = 'var(--success)'; }
+  else { pct = 100; label = 'Very Strong'; color = 'var(--success)'; }
+
+  document.getElementById('pwd-strength-label').textContent = label;
+  const bar = document.getElementById('pwd-bar');
+  bar.style.width = pct + '%';
+  bar.style.background = color;
+}
+
+function formatTime(s) {
+  if (s < 0.001) return 'Instant';
+  if (s < 1) return '< 1 second';
+  if (s < 60) return Math.round(s) + ' seconds';
+  if (s < 3600) return Math.round(s / 60) + ' minutes';
+  if (s < 86400) return Math.round(s / 3600) + ' hours';
+  if (s < 86400 * 365) return Math.round(s / 86400) + ' days';
+  if (s < 86400 * 365 * 1000) return Math.round(s / (86400 * 365)) + ' years';
+  if (s < 86400 * 365 * 1e6) return (s / (86400 * 365 * 1000)).toFixed(0) + ' thousand years';
+  if (s < 86400 * 365 * 1e9) return (s / (86400 * 365 * 1e6)).toFixed(0) + ' million years';
+  return (s / (86400 * 365 * 1e9)).toFixed(0) + ' billion years';
+}
+
+updateNav();
+</script>
+</body>
+</html>

@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W4D3 — Malware Attack Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #1b1a19;
+    --bg-surface: #252423;
+    --bg-elevated: #292827;
+    --bg-hover: #2d2c2b;
+    --bg-selected: #333231;
+    --border-subtle: #323130;
+    --border-medium: #3b3a39;
+    --border-strong: #484644;
+    --text-primary: #f3f2f1;
+    --text-secondary: #d2d0ce;
+    --text-tertiary: #a19f9d;
+    --text-muted: #8a8886;
+    --text-faint: #605e5c;
+    --accent-blue: #0078d4;
+    --accent-blue-light: #6cb8f6;
+    --accent-blue-dim: rgba(0,120,212,.08);
+    --sev-high: #d13438;
+    --sev-high-text: #f4a3a6;
+    --sev-high-bg: rgba(209,52,56,.1);
+    --sev-med: #ff8c00;
+    --sev-med-text: #ffb957;
+    --sev-med-bg: rgba(255,140,0,.1);
+    --sev-low: #fce100;
+    --sev-low-bg: rgba(252,225,0,.08);
+    --success: #107c10;
+    --success-text: #6ccf6c;
+    --success-bg: rgba(16,124,16,.1);
+    --lab: #00b7c3;
+    --lab-text: #5ce0eb;
+    --exercise: #8764b8;
+    --exercise-text: #b4a0ff;
+    --font-ui: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --shadow-card: 0 1px 3px rgba(0,0,0,.3), 0 0 0 1px var(--border-subtle);
+    --shadow-elevated: 0 4px 16px rgba(0,0,0,.4), 0 0 0 1px var(--border-subtle);
+    --t-fast: .15s cubic-bezier(.4,0,.2,1);
+    --t-med: .25s cubic-bezier(.4,0,.2,1);
+    --topbar-h: 48px;
+    --statusbar-h: 28px;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
+  html { font-size: 14px; -webkit-font-smoothing: antialiased }
+  body { font-family: var(--font-ui); background: var(--bg-base); color: var(--text-secondary); line-height: 1.6; overflow: hidden; height: 100vh }
+  code { font-family: var(--font-mono); font-size: .88em; background: rgba(0,0,0,.3); padding: 2px 6px; border-radius: 3px; color: var(--accent-blue-light) }
+  pre { font-family: var(--font-mono); font-size: .82rem; background: #141312; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 18px; overflow-x: auto; color: var(--text-secondary); line-height: 1.55; margin: 10px 0 }
+  pre code { background: none; padding: 0; color: inherit }
+  strong { font-weight: 600; color: var(--text-primary) }
+  ::-webkit-scrollbar { width: 6px; height: 6px }
+  ::-webkit-scrollbar-track { background: transparent }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px }
+
+  .app { display: flex; flex-direction: column; height: 100vh }
+
+  .topbar {
+    background: #0a0a0a; height: var(--topbar-h);
+    display: flex; align-items: center; padding: 0 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    gap: 12px; flex-shrink: 0; z-index: 100;
+  }
+  .topbar .logo { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -.02em; user-select: none }
+  .topbar .logo .brand-accent { color: var(--accent-blue-light); font-weight: 300; margin-left: -2px }
+  .topbar .sep { width: 1px; height: 24px; background: var(--border-medium); flex-shrink: 0 }
+  .topbar .week-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; padding: 2px 7px; border-radius: 3px; background: rgba(0,120,212,.15); color: var(--accent-blue-light); border: 1px solid rgba(0,120,212,.3) }
+  .topbar .right { margin-left: auto; display: flex; align-items: center; gap: 10px }
+  .slide-counter { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted) }
+  .back-link { font-size: 11px; color: var(--text-tertiary); text-decoration: none; padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); transition: all var(--t-fast) }
+  .back-link:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-strong) }
+
+  .slide-viewport { flex: 1; overflow: hidden; position: relative }
+  .slide {
+    position: absolute; inset: 0;
+    display: none; flex-direction: column;
+    overflow-y: auto;
+    padding: 40px 48px 60px;
+  }
+  .slide.active { display: flex }
+  .slide-inner { max-width: 820px; width: 100%; margin: 0 auto }
+
+  .slide-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .slide-label.lbl-theory { color: var(--success-text) }
+  .slide-label.lbl-exercise { color: var(--exercise-text) }
+  .slide-label.lbl-lab { color: var(--lab-text) }
+  .slide-label.lbl-quiz { color: var(--sev-med-text) }
+
+  .slide h1 { font-size: 26px; font-weight: 700; color: var(--text-primary); letter-spacing: -.03em; line-height: 1.2; margin-bottom: 6px }
+  .slide h2 { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: -.02em; margin: 20px 0 10px; line-height: 1.3 }
+  .slide h3 { font-size: 14px; font-weight: 600; color: var(--accent-blue-light); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: .03em }
+  .slide p { margin: 8px 0; color: var(--text-secondary) }
+  .slide ul, .slide ol { margin: 8px 0 8px 20px; color: var(--text-secondary) }
+  .slide li { margin: 4px 0 }
+  .slide-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 20px }
+
+  .info-box { border-radius: var(--radius-md); padding: 14px 18px; margin: 14px 0; border-left: 3px solid; font-size: 13px }
+  .info-box.warn { background: var(--sev-med-bg); border-color: var(--sev-med); color: var(--sev-med-text) }
+  .info-box.danger { background: var(--sev-high-bg); border-color: var(--sev-high); color: var(--sev-high-text) }
+  .info-box.info { background: rgba(0,120,212,.08); border-color: var(--accent-blue); color: var(--accent-blue-light) }
+  .info-box.success { background: var(--success-bg); border-color: var(--success); color: var(--success-text) }
+  .info-box.lab-box { background: rgba(0,183,195,.08); border-color: var(--lab); color: var(--lab-text) }
+  .info-box strong { color: inherit }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 14px 0 }
+  .g-card { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; transition: all var(--t-fast) }
+  .g-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-elevated) }
+  .g-card .g-icon { font-size: 24px; margin-bottom: 8px }
+  .g-card .g-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px }
+  .g-card .g-text { font-size: 12px; color: var(--text-tertiary); line-height: 1.5 }
+
+  .quiz-block { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 20px; margin: 14px 0 }
+  .quiz-block .q-question { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px }
+  .quiz-block .q-options { display: flex; flex-direction: column; gap: 8px }
+  .q-opt {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle); background: var(--bg-surface);
+    cursor: pointer; transition: all var(--t-fast); font-size: 13px; color: var(--text-secondary);
+  }
+  .q-opt:hover { border-color: var(--border-strong); background: var(--bg-hover) }
+  .q-opt .q-letter { width: 24px; height: 24px; border-radius: 50%; background: var(--border-medium); color: var(--text-primary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0 }
+  .q-opt.correct { border-color: var(--success); background: var(--success-bg) }
+  .q-opt.correct .q-letter { background: var(--success); color: #fff }
+  .q-opt.wrong { border-color: var(--sev-high); background: var(--sev-high-bg) }
+  .q-opt.wrong .q-letter { background: var(--sev-high); color: #fff }
+  .q-feedback { margin-top: 12px; padding: 10px 14px; border-radius: var(--radius-md); font-size: 12px; display: none }
+  .q-feedback.show { display: block }
+  .q-feedback.fb-correct { background: var(--success-bg); color: var(--success-text); border: 1px solid rgba(16,124,16,.2) }
+  .q-feedback.fb-wrong { background: var(--sev-high-bg); color: var(--sev-high-text); border: 1px solid rgba(209,52,56,.2) }
+
+  .lab-input-group { margin: 12px 0 }
+  .lab-input-group label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: 6px }
+  .lab-input { width: 100%; padding: 10px 14px; font-family: var(--font-mono); font-size: 13px; background: #141312; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-primary); outline: none; transition: border-color var(--t-fast) }
+  .lab-input:focus { border-color: var(--accent-blue) }
+  .lab-input::placeholder { color: var(--text-faint) }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius-md); border: none; font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer; transition: all var(--t-fast) }
+  .btn-primary { background: var(--accent-blue); color: #fff }
+  .btn-primary:hover { background: #1a86d9 }
+  .btn-success { background: var(--success); color: #fff }
+  .btn-success:hover { background: #12961a }
+  .btn-outline { background: transparent; color: var(--text-tertiary); border: 1px solid var(--border-medium) }
+  .btn-outline:hover { background: var(--bg-hover); color: var(--text-primary) }
+
+  .result-box { margin-top: 12px; padding: 12px 16px; background: #141312; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); min-height: 40px; white-space: pre-wrap }
+
+  .data-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12.5px }
+  .data-table th { text-align: left; padding: 8px 12px; background: var(--bg-surface); border-bottom: 2px solid var(--border-medium); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .06em }
+  .data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary) }
+  .data-table tr:hover td { background: var(--bg-hover) }
+
+  .tag { display: inline-flex; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em }
+  .tag-red { background: var(--sev-high-bg); color: var(--sev-high-text); border: 1px solid rgba(209,52,56,.2) }
+  .tag-orange { background: var(--sev-med-bg); color: var(--sev-med-text); border: 1px solid rgba(255,140,0,.2) }
+  .tag-green { background: var(--success-bg); color: var(--success-text); border: 1px solid rgba(16,124,16,.2) }
+  .tag-blue { background: rgba(0,120,212,.1); color: var(--accent-blue-light); border: 1px solid rgba(0,120,212,.2) }
+  .tag-purple { background: rgba(135,100,184,.15); color: var(--exercise-text); border: 1px solid rgba(135,100,184,.3) }
+
+  .vs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 }
+  .vs-col { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px }
+  .vs-col h3 { margin-top: 0 }
+
+  .nav-bar { height: var(--statusbar-h); background: #0a0a0a; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; gap: 12px; flex-shrink: 0; padding: 0 16px }
+  .nav-btn { padding: 3px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: var(--bg-elevated); color: var(--text-tertiary); font-size: 11px; font-family: var(--font-ui); font-weight: 600; cursor: pointer; transition: all var(--t-fast); display: flex; align-items: center; gap: 5px }
+  .nav-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-strong) }
+  .nav-btn:disabled { opacity: .3; cursor: default }
+  .nav-dots { display: flex; gap: 5px; align-items: center }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); transition: all var(--t-fast); cursor: pointer }
+  .nav-dot.active { background: var(--accent-blue); width: 18px; border-radius: 3px }
+  .nav-dot:hover { background: var(--text-muted) }
+
+  .statusbar { height: var(--statusbar-h); background: var(--accent-blue); display: flex; align-items: center; padding: 0 16px; gap: 16px; font-size: 11px; color: rgba(255,255,255,.9); flex-shrink: 0; user-select: none }
+  .statusbar .sb-sep { width: 1px; height: 14px; background: rgba(255,255,255,.2) }
+  .statusbar .sb-item { display: flex; align-items: center; gap: 5px }
+  .statusbar .sb-dot { width: 7px; height: 7px; border-radius: 50%; background: #4cff4c }
+  .statusbar .sb-right { margin-left: auto; display: flex; align-items: center; gap: 14px }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
+  .slide.active .slide-inner { animation: fadeIn .3s ease-out }
+
+  @media (max-width: 700px) {
+    .slide { padding: 24px 18px 48px }
+    .slide h1 { font-size: 20px }
+    .card-grid { grid-template-columns: 1fr }
+    .vs-grid { grid-template-columns: 1fr }
+  }
+
+  /* Sortable lifecycle */
+  .lifecycle-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 }
+  .lc-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+    cursor: grab; font-size: 13px; color: var(--text-secondary);
+    user-select: none; transition: all var(--t-fast);
+  }
+  .lc-item:hover { border-color: var(--border-strong); background: var(--bg-hover) }
+  .lc-item.dragging { opacity: .4 }
+  .lc-item.drag-over { border-color: var(--accent-blue); background: var(--accent-blue-dim) }
+  .lc-item .lc-num { width: 24px; height: 24px; border-radius: 50%; background: var(--border-medium); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0 }
+  .lc-item.correct-pos .lc-num { background: var(--success); color: #fff }
+  .lc-item.wrong-pos .lc-num { background: var(--sev-high); color: #fff }
+
+  /* Malware classifier */
+  .classify-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 }
+  .classify-drop { min-height: 80px; border: 2px dashed var(--border-medium); border-radius: var(--radius-md); padding: 10px; display: flex; flex-direction: column; gap: 6px; transition: border-color var(--t-fast) }
+  .classify-drop.drag-active { border-color: var(--accent-blue) }
+  .classify-drop .drop-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 4px }
+  .classify-chip {
+    padding: 6px 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary);
+    cursor: grab; user-select: none; display: inline-block; transition: all var(--t-fast);
+  }
+  .classify-chip:hover { border-color: var(--accent-blue); color: var(--accent-blue-light) }
+  .classify-chip.placed-correct { background: var(--success-bg); border-color: var(--success); color: var(--success-text) }
+  .classify-chip.placed-wrong { background: var(--sev-high-bg); border-color: var(--sev-high); color: var(--sev-high-text) }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="logo">
+    <span style="font-size:20px">&#128737;</span>
+    SOC<span class="brand-accent">Academy</span>
+  </div>
+  <div class="sep"></div>
+  <span class="week-badge">W4D3 &middot; Malware Analysis</span>
+  <div class="right">
+    <span class="slide-counter" id="slide-counter">1 / 31</span>
+    <div class="sep"></div>
+    <a href="index.html" class="back-link">&#8592; Day Plan</a>
+  </div>
+</div>
+
+<!-- ═══ SLIDES ═══ -->
+<div class="slide-viewport" id="slide-viewport">
+
+<!-- ============================================================ -->
+<!-- SLIDE 1: Title -->
+<!-- ============================================================ -->
+<div class="slide active" data-slide="1">
+  <div class="slide-inner">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center">
+      <div style="font-size:64px;margin-bottom:16px">&#128027;&#128272;</div>
+      <h1 style="font-size:32px;margin-bottom:8px">Malware Attack Analysis</h1>
+      <p class="slide-subtitle" style="font-size:15px">Week 4 &middot; Day 3 &mdash; Interactive Exercises &amp; Labs</p>
+      <div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap;justify-content:center">
+        <span class="tag tag-red">Ransomware</span>
+        <span class="tag tag-orange">Viruses</span>
+        <span class="tag tag-orange">Worms</span>
+        <span class="tag tag-purple">Trojans</span>
+        <span class="tag tag-blue">Adware</span>
+        <span class="tag tag-green">VirusTotal</span>
+        <span class="tag tag-blue">EDR &amp; Wazuh</span>
+      </div>
+      <p style="margin-top:32px;color:var(--text-faint);font-size:12px">Use <kbd style="background:var(--bg-elevated);padding:2px 8px;border-radius:3px;border:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:11px">&#8592;</kbd> <kbd style="background:var(--bg-elevated);padding:2px 8px;border-radius:3px;border:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:11px">&#8594;</kbd> arrow keys to navigate</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 2: What is Malware -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="2">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>What Is Malware?</h1>
+    <p class="slide-subtitle">Malicious software designed to disrupt, damage, or gain unauthorized access to systems</p>
+
+    <div class="card-grid">
+      <div class="g-card">
+        <div class="g-icon">&#128292;</div>
+        <div class="g-title">Broad Category</div>
+        <div class="g-text">Malware is an umbrella term &mdash; ransomware, viruses, worms, trojans, spyware, adware, and rootkits are all types of malware</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128260;</div>
+        <div class="g-title">Intent Matters</div>
+        <div class="g-text">All malware is intentionally written to cause harm, spy, extort, or enable unauthorized access</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#127758;</div>
+        <div class="g-title">Universal Threat</div>
+        <div class="g-text">Targets individuals, corporations, hospitals, governments &mdash; no organization is too small or too large</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128200;</div>
+        <div class="g-title">Growing Problem</div>
+        <div class="g-text">Over 450,000 new malware samples are detected every day. Cost of cybercrime expected to reach $10.5 trillion annually by 2025</div>
+      </div>
+    </div>
+
+    <div class="info-box info">
+      <strong>Key Distinction:</strong> Not all malware is equal. Understanding <em>how</em> each type behaves determines which defenses are most effective against it.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 3: Malware Types Overview -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="3">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Malware at a Glance</h1>
+    <p class="slide-subtitle">Eight major categories — each with distinct behavior and purpose</p>
+
+    <table class="data-table">
+      <thead><tr><th>Type</th><th>Self-Replicates?</th><th>Needs Host?</th><th>Primary Goal</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Virus</strong></td><td><span class="tag tag-red">Yes</span></td><td><span class="tag tag-red">Yes</span></td><td>Spread &amp; damage files</td></tr>
+        <tr><td><strong>Worm</strong></td><td><span class="tag tag-red">Yes</span></td><td><span class="tag tag-green">No</span></td><td>Spread across networks autonomously</td></tr>
+        <tr><td><strong>Trojan</strong></td><td><span class="tag tag-green">No</span></td><td><span class="tag tag-green">No</span></td><td>Deceptive backdoor / data theft</td></tr>
+        <tr><td><strong>Ransomware</strong></td><td><span class="tag tag-orange">Sometimes</span></td><td><span class="tag tag-green">No</span></td><td>Extort victim via encryption</td></tr>
+        <tr><td><strong>Spyware</strong></td><td><span class="tag tag-green">No</span></td><td><span class="tag tag-green">No</span></td><td>Covert data collection</td></tr>
+        <tr><td><strong>Adware</strong></td><td><span class="tag tag-green">No</span></td><td><span class="tag tag-green">No</span></td><td>Revenue via intrusive ads</td></tr>
+        <tr><td><strong>Botnet</strong></td><td><span class="tag tag-orange">Sometimes</span></td><td><span class="tag tag-green">No</span></td><td>DDoS / spam / crypto mining</td></tr>
+        <tr><td><strong>Rootkit</strong></td><td><span class="tag tag-green">No</span></td><td><span class="tag tag-green">No</span></td><td>Persistent stealth access</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box warn">
+      <strong>Real-world attacks often combine types</strong> &mdash; a Trojan may drop ransomware which then spreads like a worm through a network (e.g. WannaCry used EternalBlue to worm through SMB shares).
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 4: Malware Delivery Methods -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="4">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>How Malware Gets In</h1>
+    <p class="slide-subtitle">Common delivery vectors used by attackers</p>
+
+    <div class="card-grid">
+      <div class="g-card">
+        <div class="g-icon">&#128140;</div>
+        <div class="g-title">Email Attachments &amp; Links</div>
+        <div class="g-text">Phishing emails with malicious .docx, .pdf, or .exe attachments remain the #1 initial access vector</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#127760;</div>
+        <div class="g-title">Drive-By Downloads</div>
+        <div class="g-text">Visiting a compromised website triggers automatic malware download without user interaction</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128190;</div>
+        <div class="g-title">Infected Media</div>
+        <div class="g-text">USB drives or external disks pre-loaded with malware that auto-runs on connection</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128736;</div>
+        <div class="g-title">Software Bundling</div>
+        <div class="g-text">Malware hidden inside legitimate-looking free software installers or cracked applications</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128247;</div>
+        <div class="g-title">Malvertising</div>
+        <div class="g-text">Malicious ads served on legitimate websites that redirect to exploit kits</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128272;</div>
+        <div class="g-title">Exploiting Vulnerabilities</div>
+        <div class="g-text">Unpatched software vulnerabilities allow worms and rootkits to self-install without user action</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 5: Quiz — Malware Basics -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="5">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Quiz</span>
+    <h1>Malware Basics Check</h1>
+    <p class="slide-subtitle">Two questions — think before you click</p>
+
+    <div class="quiz-block" id="q1">
+      <div class="q-question">1. Which type of malware does NOT require a host file to spread?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q1',this,false)"><span class="q-letter">A</span> Virus</div>
+        <div class="q-opt" onclick="checkQuiz('q1',this,true)"><span class="q-letter">B</span> Worm</div>
+        <div class="q-opt" onclick="checkQuiz('q1',this,false)"><span class="q-letter">C</span> Macro virus</div>
+        <div class="q-opt" onclick="checkQuiz('q1',this,false)"><span class="q-letter">D</span> Boot sector virus</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q1-correct">Correct! Worms are self-contained — they replicate and spread across networks without needing to attach to any host file.</div>
+      <div class="q-feedback fb-wrong" id="q1-wrong">Not quite. Worms are self-contained and spread independently without needing a host file, unlike viruses.</div>
+    </div>
+
+    <div class="quiz-block" id="q2" style="margin-top:16px">
+      <div class="q-question">2. An attacker bundles a keylogger inside a free video converter app. What malware type best describes this?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q2',this,false)"><span class="q-letter">A</span> Ransomware</div>
+        <div class="q-opt" onclick="checkQuiz('q2',this,false)"><span class="q-letter">B</span> Worm</div>
+        <div class="q-opt" onclick="checkQuiz('q2',this,true)"><span class="q-letter">C</span> Trojan Horse</div>
+        <div class="q-opt" onclick="checkQuiz('q2',this,false)"><span class="q-letter">D</span> Adware</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q2-correct">Correct! A Trojan disguises malicious code as legitimate software to trick users into installing it.</div>
+      <div class="q-feedback fb-wrong" id="q2-wrong">Not quite. This is a Trojan Horse — malware disguised as legitimate software (the video converter) to deceive the user.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 6: Ransomware — Overview -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="6">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Ransomware</h1>
+    <p class="slide-subtitle">Encrypts your files, demands payment for the key</p>
+
+    <div class="vs-grid">
+      <div class="vs-col">
+        <h3>&#128274; Locker Ransomware</h3>
+        <ul style="font-size:12px">
+          <li>Locks the <strong>entire device</strong> — mouse, keyboard, screen</li>
+          <li>Does not encrypt files directly</li>
+          <li>Basic computer functions are disrupted</li>
+          <li>Example: early Android screen-lockers</li>
+        </ul>
+      </div>
+      <div class="vs-col">
+        <h3>&#128272; Crypto Ransomware</h3>
+        <ul style="font-size:12px">
+          <li>Encrypts <strong>files and documents</strong> specifically</li>
+          <li>Device remains usable — just data is locked</li>
+          <li>Much more dangerous and common today</li>
+          <li>Examples: WannaCry, REvil, LockBit, Conti</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Why Cryptocurrency?</h2>
+    <p>Attackers demand payment in <strong>Bitcoin or Monero</strong> because:</p>
+    <ul>
+      <li>Transactions are pseudonymous / anonymous (Monero)</li>
+      <li>No chargebacks — payment is irreversible</li>
+      <li>Cross-border payments avoid banking oversight</li>
+      <li>Funds can be quickly laundered through mixers</li>
+    </ul>
+
+    <div class="info-box danger">
+      <strong>No Guarantee:</strong> Even after paying the ransom, ~20% of victims never receive a working decryption key. Paying also incentivizes future attacks.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 7: Ransomware Life Cycle -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="7">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Ransomware Attack Life Cycle</h1>
+    <p class="slide-subtitle">Eight stages from initial delivery to post-attack</p>
+
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Stage</th><th>What Happens</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1</strong></td><td>Delivery</td><td>Phishing email, drive-by download, or RDP brute force</td></tr>
+        <tr><td><strong>2</strong></td><td>Execution</td><td>Victim opens attachment / visits compromised site; payload runs</td></tr>
+        <tr><td><strong>3</strong></td><td>Persistence</td><td>Malware installs itself in startup locations to survive reboots</td></tr>
+        <tr><td><strong>4</strong></td><td>Encryption</td><td>Files are encrypted using strong asymmetric keys (RSA + AES)</td></tr>
+        <tr><td><strong>5</strong></td><td>Ransom Note</td><td>Victim sees a README or pop-up with payment instructions</td></tr>
+        <tr><td><strong>6</strong></td><td>Payment</td><td>Victim uses Tor browser to contact attacker, pays in crypto</td></tr>
+        <tr><td><strong>7</strong></td><td>Decryption Key</td><td>Attacker (maybe) provides decryption tool</td></tr>
+        <tr><td><strong>8</strong></td><td>Post-Attack</td><td>Data may be leaked (double extortion); reinfection risk remains</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box warn">
+      <strong>Double Extortion:</strong> Modern ransomware groups (LockBit, Cl0p) exfiltrate data <em>before</em> encrypting it. They threaten to publish sensitive data if the ransom isn't paid — even if you restore from backups.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 8: Exercise — Order the Ransomware Lifecycle -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="8">
+  <div class="slide-inner">
+    <span class="slide-label lbl-exercise">&#9881; Exercise 1</span>
+    <h1>Order the Ransomware Lifecycle</h1>
+    <p class="slide-subtitle">Drag the stages into the correct order, then check your answer</p>
+
+    <div class="lifecycle-list" id="lc-list">
+      <div class="lc-item" draggable="true" data-correct="4"><span class="lc-num">?</span> Files are encrypted with RSA + AES keys</div>
+      <div class="lc-item" draggable="true" data-correct="1"><span class="lc-num">?</span> Phishing email delivers malicious attachment</div>
+      <div class="lc-item" draggable="true" data-correct="6"><span class="lc-num">?</span> Victim pays ransom in cryptocurrency via Tor</div>
+      <div class="lc-item" draggable="true" data-correct="5"><span class="lc-num">?</span> Ransom note appears with payment instructions</div>
+      <div class="lc-item" draggable="true" data-correct="2"><span class="lc-num">?</span> Victim opens the attachment; payload executes</div>
+      <div class="lc-item" draggable="true" data-correct="3"><span class="lc-num">?</span> Malware adds itself to startup for persistence</div>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="checkLifecycle()">&#10003; Check Order</button>
+      <button class="btn btn-outline" onclick="resetLifecycle()">&#8635; Shuffle Again</button>
+    </div>
+    <div id="lc-result" class="result-box" style="display:none;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 9: Ransomware Quiz -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="9">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Quiz</span>
+    <h1>Ransomware Deep Dive</h1>
+    <p class="slide-subtitle">Two questions on ransomware specifics</p>
+
+    <div class="quiz-block" id="q3">
+      <div class="q-question">1. What distinguishes "double extortion" ransomware from standard ransomware?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q3',this,false)"><span class="q-letter">A</span> It encrypts files twice using two different algorithms</div>
+        <div class="q-opt" onclick="checkQuiz('q3',this,false)"><span class="q-letter">B</span> It demands two separate ransom payments</div>
+        <div class="q-opt" onclick="checkQuiz('q3',this,true)"><span class="q-letter">C</span> It exfiltrates data before encrypting, threatening to publish it</div>
+        <div class="q-opt" onclick="checkQuiz('q3',this,false)"><span class="q-letter">D</span> It attacks two different victims simultaneously</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q3-correct">Correct! Double extortion means attackers steal your data first, then encrypt it. Even with backups, they can still leak sensitive information.</div>
+      <div class="q-feedback fb-wrong" id="q3-wrong">Not quite. Double extortion = exfiltrate data THEN encrypt. Victims face two threats: losing access AND having data published.</div>
+    </div>
+
+    <div class="quiz-block" id="q4" style="margin-top:16px">
+      <div class="q-question">2. Which defense is MOST effective at reducing the impact of a crypto-ransomware attack?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q4',this,false)"><span class="q-letter">A</span> Strong password policy</div>
+        <div class="q-opt" onclick="checkQuiz('q4',this,true)"><span class="q-letter">B</span> Offline, tested data backups</div>
+        <div class="q-opt" onclick="checkQuiz('q4',this,false)"><span class="q-letter">C</span> Network firewall rules</div>
+        <div class="q-opt" onclick="checkQuiz('q4',this,false)"><span class="q-letter">D</span> Antivirus software</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q4-correct">Correct! Offline, regularly tested backups are the best recovery option. Ransomware often targets connected backup drives too — offline is key.</div>
+      <div class="q-feedback fb-wrong" id="q4-wrong">Not quite. Offline backups are the primary mitigation — they allow recovery without paying. Antivirus may not catch new ransomware variants.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 10: Computer Virus -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="10">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Computer Virus</h1>
+    <p class="slide-subtitle">Self-replicating malware that requires a host to spread</p>
+
+    <h2>Five Defining Characteristics</h2>
+    <div class="card-grid">
+      <div class="g-card">
+        <div class="g-icon">&#128260;</div>
+        <div class="g-title">Replication</div>
+        <div class="g-text">Attaches a copy of itself to other executable files or documents</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128228;</div>
+        <div class="g-title">Propagation</div>
+        <div class="g-text">Spreads when infected files are shared via email, USB, or network shares</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128168;</div>
+        <div class="g-title">Activation</div>
+        <div class="g-text">Triggers its payload under specific conditions (date, event, or action)</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128373;</div>
+        <div class="g-title">Concealment</div>
+        <div class="g-text">Encrypts or obfuscates its code to evade signature-based detection</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128165;</div>
+        <div class="g-title">Payload</div>
+        <div class="g-text">Executes damage: deleting files, corrupting data, or installing more malware</div>
+      </div>
+    </div>
+
+    <h2>Common Virus Types</h2>
+    <ul>
+      <li><strong>File Virus</strong> &mdash; infects executable files (.exe, .com)</li>
+      <li><strong>Macro Virus</strong> &mdash; hides in Office documents (Word macros)</li>
+      <li><strong>Boot Sector Virus</strong> &mdash; infects the master boot record; activates before the OS loads</li>
+      <li><strong>Browser / Web Scripting Virus</strong> &mdash; embedded in malicious web pages</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 11: Virus Detection Methods -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="11">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Detecting Computer Viruses</h1>
+    <p class="slide-subtitle">Three detection approaches — each with strengths and limitations</p>
+
+    <div class="vs-grid">
+      <div class="vs-col">
+        <h3>&#128209; Signature-Based</h3>
+        <p style="font-size:12px">Matches file patterns against a database of known malware signatures.</p>
+        <p style="font-size:12px"><span class="tag tag-green">Pro</span> Fast, accurate for known threats</p>
+        <p style="font-size:12px"><span class="tag tag-red">Con</span> Useless against new / polymorphic viruses</p>
+      </div>
+      <div class="vs-col">
+        <h3>&#128200; Behavior-Based</h3>
+        <p style="font-size:12px">Monitors running processes for suspicious activity (file writes, registry changes).</p>
+        <p style="font-size:12px"><span class="tag tag-green">Pro</span> Can catch zero-day threats</p>
+        <p style="font-size:12px"><span class="tag tag-red">Con</span> Higher false positive rate</p>
+      </div>
+    </div>
+    <div style="margin-top:12px" class="vs-grid">
+      <div class="vs-col">
+        <h3>&#9925; Cloud-Based / Heuristic</h3>
+        <p style="font-size:12px">Sends suspect files to cloud for analysis using ML models and sandboxing.</p>
+        <p style="font-size:12px"><span class="tag tag-green">Pro</span> Always up to date; no local DB needed</p>
+        <p style="font-size:12px"><span class="tag tag-red">Con</span> Requires internet; privacy concerns</p>
+      </div>
+      <div class="vs-col">
+        <h3>&#128202; Prevention Summary</h3>
+        <ul style="font-size:12px">
+          <li>Keep OS and apps patched</li>
+          <li>Use reputable AV software</li>
+          <li>Never open unexpected attachments</li>
+          <li>Avoid pirated / cracked software</li>
+          <li>Scan removable media before use</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 12: Computer Worm -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="12">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Computer Worm</h1>
+    <p class="slide-subtitle">Self-replicating, network-aware — no host file required</p>
+
+    <h2>What Makes Worms Different?</h2>
+    <p>Unlike viruses, worms don't need a user to share an infected file. They <strong>autonomously scan networks</strong>, find vulnerable machines, and copy themselves — often within minutes of initial infection.</p>
+
+    <h2>Types of Worms</h2>
+    <table class="data-table">
+      <thead><tr><th>Type</th><th>Spread Method</th><th>Famous Example</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Internet Worm</strong></td><td>Exploits network service vulnerabilities</td><td>WannaCry (SMB / EternalBlue)</td></tr>
+        <tr><td><strong>Email Worm</strong></td><td>Sends itself to all contacts in address book</td><td>MyDoom (2004)</td></tr>
+        <tr><td><strong>Instant Message Worm</strong></td><td>Sends malicious links via IM platforms</td><td>Koobface (Facebook)</td></tr>
+        <tr><td><strong>File-Sharing Worm</strong></td><td>Disguised as popular files on P2P networks</td><td>Sality</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box danger">
+      <strong>WannaCry (2017):</strong> Infected 230,000+ computers in 150 countries in <em>one day</em> by exploiting an unpatched Windows SMB vulnerability. Caused $4–8 billion in damages. The NHS UK was severely disrupted.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 13: Worm vs Virus Comparison -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="13">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Virus vs Worm</h1>
+    <p class="slide-subtitle">Common confusion — here's how to tell them apart</p>
+
+    <table class="data-table">
+      <thead><tr><th>Characteristic</th><th>Virus</th><th>Worm</th></tr></thead>
+      <tbody>
+        <tr><td>Needs host file?</td><td><span class="tag tag-red">Yes</span></td><td><span class="tag tag-green">No</span></td></tr>
+        <tr><td>Spreads without user action?</td><td><span class="tag tag-green">No</span></td><td><span class="tag tag-red">Yes</span></td></tr>
+        <tr><td>Exploits network vulnerabilities?</td><td>Rarely</td><td>Commonly</td></tr>
+        <tr><td>Speed of spread</td><td>Slow (requires sharing)</td><td>Very fast (autonomous)</td></tr>
+        <tr><td>Payload</td><td>Yes (data destruction, etc.)</td><td>Optional (can carry payload)</td></tr>
+        <tr><td>Typical detection</td><td>File scanner</td><td>Network IDS / anomaly detection</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Worm Prevention Checklist</h2>
+    <ul>
+      <li><strong>Patch promptly</strong> &mdash; worms exploit known, unpatched vulnerabilities</li>
+      <li><strong>Network segmentation</strong> &mdash; isolate critical systems to limit spread</li>
+      <li><strong>Disable unused services</strong> &mdash; SMBv1, Telnet, etc.</li>
+      <li><strong>IDS/IPS monitoring</strong> &mdash; detect anomalous port scanning behavior</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 14: Quiz — Virus & Worm -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="14">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Quiz</span>
+    <h1>Virus &amp; Worm Quiz</h1>
+    <p class="slide-subtitle">Test your knowledge on these two malware types</p>
+
+    <div class="quiz-block" id="q5">
+      <div class="q-question">1. A SOC analyst notices unusual outbound traffic: hundreds of machines on the internal network are all scanning port 445 on neighboring subnets. What type of malware is most likely responsible?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q5',this,false)"><span class="q-letter">A</span> Virus</div>
+        <div class="q-opt" onclick="checkQuiz('q5',this,true)"><span class="q-letter">B</span> Worm</div>
+        <div class="q-opt" onclick="checkQuiz('q5',this,false)"><span class="q-letter">C</span> Trojan</div>
+        <div class="q-opt" onclick="checkQuiz('q5',this,false)"><span class="q-letter">D</span> Adware</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q5-correct">Correct! Autonomous network scanning (port 445 = SMB) is a classic worm behavior — it's looking for new hosts to infect (like WannaCry).</div>
+      <div class="q-feedback fb-wrong" id="q5-wrong">Not quite. Port scanning across subnets is a classic worm behavior. Worms self-propagate by finding vulnerable services like SMB (port 445).</div>
+    </div>
+
+    <div class="quiz-block" id="q6" style="margin-top:16px">
+      <div class="q-question">2. A user opens a Word document from email and their system gets infected. Two weeks later the same document is shared to a colleague and they get infected too. What is this?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q6',this,true)"><span class="q-letter">A</span> Macro Virus</div>
+        <div class="q-opt" onclick="checkQuiz('q6',this,false)"><span class="q-letter">B</span> Worm</div>
+        <div class="q-opt" onclick="checkQuiz('q6',this,false)"><span class="q-letter">C</span> Ransomware</div>
+        <div class="q-opt" onclick="checkQuiz('q6',this,false)"><span class="q-letter">D</span> Rootkit</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q6-correct">Correct! Macro viruses live inside Office documents. They require a user to share the infected file — classic virus behavior requiring a host.</div>
+      <div class="q-feedback fb-wrong" id="q6-wrong">Not quite. This is a Macro Virus — it lives inside the Word document (host) and spreads when users share that infected file.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 15: Trojan Horse -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="15">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Trojan Horse</h1>
+    <p class="slide-subtitle">Deception is the weapon — malicious code disguised as something legitimate</p>
+
+    <h2>Core Concept</h2>
+    <p>Trojans rely entirely on <strong>social engineering</strong>. They don't replicate. Instead they convince users to voluntarily install them by pretending to be a useful app, game, update, or document.</p>
+
+    <h2>Common Trojan Types</h2>
+    <div class="card-grid">
+      <div class="g-card">
+        <div class="g-icon">&#128196;</div>
+        <div class="g-title">Backdoor Trojan</div>
+        <div class="g-text">Opens a remote access channel; attacker can execute commands, upload/download files</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128176;</div>
+        <div class="g-title">Banking Trojan</div>
+        <div class="g-text">Intercepts banking sessions, injects fake forms to harvest credentials (e.g. Zeus, Emotet)</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128100;</div>
+        <div class="g-title">RAT (Remote Access Trojan)</div>
+        <div class="g-text">Full remote control: webcam, keylogger, screen capture, file system access</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#9660;</div>
+        <div class="g-title">Downloader Trojan</div>
+        <div class="g-text">Foothold only — downloads and installs additional malware (ransomware, RATs) after execution</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128373;</div>
+        <div class="g-title">Rootkit Trojan</div>
+        <div class="g-text">Installs rootkits to hide attacker's presence and maintain persistent, stealthy access</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128737;</div>
+        <div class="g-title">Antivirus Fraud Trojan</div>
+        <div class="g-text">Fakes AV alerts to scare users into "purchasing" a fix that installs more malware</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 16: Trojan Quiz -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="16">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Quiz</span>
+    <h1>Trojan Horse Quiz</h1>
+    <p class="slide-subtitle">Apply your understanding of Trojan behavior</p>
+
+    <div class="quiz-block" id="q7">
+      <div class="q-question">1. An attacker compromises a machine and can now see the victim's screen in real time, record keystrokes, and browse their file system — all without the victim's knowledge. What Trojan type is this?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q7',this,false)"><span class="q-letter">A</span> Banking Trojan</div>
+        <div class="q-opt" onclick="checkQuiz('q7',this,false)"><span class="q-letter">B</span> Downloader Trojan</div>
+        <div class="q-opt" onclick="checkQuiz('q7',this,true)"><span class="q-letter">C</span> Remote Access Trojan (RAT)</div>
+        <div class="q-opt" onclick="checkQuiz('q7',this,false)"><span class="q-letter">D</span> Rootkit Trojan</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q7-correct">Correct! A RAT gives the attacker full interactive control over the victim's system — camera, keyboard, screen, and files.</div>
+      <div class="q-feedback fb-wrong" id="q7-wrong">Not quite. Full remote interactive control (screen, keylogger, files) is the hallmark of a RAT — Remote Access Trojan.</div>
+    </div>
+
+    <div class="quiz-block" id="q8" style="margin-top:16px">
+      <div class="q-question">2. How does a Trojan primarily differ from a worm?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q8',this,false)"><span class="q-letter">A</span> Trojans encrypt files; worms don't</div>
+        <div class="q-opt" onclick="checkQuiz('q8',this,false)"><span class="q-letter">B</span> Trojans spread faster across networks</div>
+        <div class="q-opt" onclick="checkQuiz('q8',this,true)"><span class="q-letter">C</span> Trojans rely on user deception and don't self-replicate</div>
+        <div class="q-opt" onclick="checkQuiz('q8',this,false)"><span class="q-letter">D</span> Trojans only target Windows systems</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q8-correct">Correct! Trojans depend on tricking users — they have no self-replication mechanism. Worms spread autonomously.</div>
+      <div class="q-feedback fb-wrong" id="q8-wrong">Not quite. The key distinction is that Trojans don't replicate. They rely entirely on social engineering to get installed.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 17: Adware -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="17">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Adware</h1>
+    <p class="slide-subtitle">Advertising-supported software — intrusive, privacy-invasive, and often unwanted</p>
+
+    <div class="vs-grid">
+      <div class="vs-col">
+        <h3>&#128178; Legitimate Adware</h3>
+        <p style="font-size:12px">User knowingly agrees to see ads in exchange for free software. Disclosed in Terms of Service. Can be uninstalled.</p>
+        <p style="font-size:12px"><span class="tag tag-green">Low Risk</span></p>
+      </div>
+      <div class="vs-col">
+        <h3>&#128272; Unwanted Adware</h3>
+        <p style="font-size:12px">Installed without informed consent, bundled with other software. Difficult to remove. Often includes spyware components that track browsing.</p>
+        <p style="font-size:12px"><span class="tag tag-red">High Risk</span></p>
+      </div>
+    </div>
+
+    <h2>Revenue Models Used by Adware Creators</h2>
+    <table class="data-table">
+      <thead><tr><th>Model</th><th>How It Works</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Pay Per Click (PPC)</strong></td><td>Adware generates fake clicks on ads, earning revenue per click even without user intent</td></tr>
+        <tr><td><strong>Pay Per View (PPV)</strong></td><td>Ad impressions are sold — adware inflates view counts by force-loading ads</td></tr>
+        <tr><td><strong>Data Brokering</strong></td><td>Browsing history and personal data is collected and sold to third-party data brokers</td></tr>
+        <tr><td><strong>Browser Hijacking</strong></td><td>Default search engine replaced to redirect searches through revenue-generating engine</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 18: Adware Quiz -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="18">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Quiz</span>
+    <h1>Adware Quiz</h1>
+    <p class="slide-subtitle">Think about adware behavior and impact</p>
+
+    <div class="quiz-block" id="q9">
+      <div class="q-question">1. A user installs a free PDF converter. Afterwards, their browser homepage has changed, new toolbars appeared, and they're seeing ads on websites that never had them before. What most likely happened?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q9',this,false)"><span class="q-letter">A</span> Their browser was outdated</div>
+        <div class="q-opt" onclick="checkQuiz('q9',this,true)"><span class="q-letter">B</span> Adware was bundled with the PDF converter installation</div>
+        <div class="q-opt" onclick="checkQuiz('q9',this,false)"><span class="q-letter">C</span> A worm infected their system</div>
+        <div class="q-opt" onclick="checkQuiz('q9',this,false)"><span class="q-letter">D</span> Their DNS settings were poisoned</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q9-correct">Correct! This is classic adware bundling — installed alongside free software. Changed homepage and injected ads are the telltale signs.</div>
+      <div class="q-feedback fb-wrong" id="q9-wrong">Not quite. Changed homepage + toolbars + injected ads = adware, typically bundled with free software installers.</div>
+    </div>
+
+    <div class="quiz-block" id="q10" style="margin-top:16px">
+      <div class="q-question">2. What makes adware with spyware components more dangerous than standard adware?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q10',this,false)"><span class="q-letter">A</span> It shows more ads per page</div>
+        <div class="q-opt" onclick="checkQuiz('q10',this,false)"><span class="q-letter">B</span> It replicates itself to other machines</div>
+        <div class="q-opt" onclick="checkQuiz('q10',this,true)"><span class="q-letter">C</span> It silently collects sensitive data like passwords and browsing habits</div>
+        <div class="q-opt" onclick="checkQuiz('q10',this,false)"><span class="q-letter">D</span> It encrypts the user's files</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q10-correct">Correct! Spyware components elevate risk significantly — keyloggers and session recorders can steal credentials and financial data.</div>
+      <div class="q-feedback fb-wrong" id="q10-wrong">Not quite. The danger is covert data collection — keystrokes, login credentials, browsing habits — sent silently to attackers.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 19: Exercise — Classify the Malware -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="19">
+  <div class="slide-inner">
+    <span class="slide-label lbl-exercise">&#9881; Exercise 2</span>
+    <h1>Classify the Malware</h1>
+    <p class="slide-subtitle">Click a scenario, then click the correct malware type</p>
+
+    <div id="classify-exercise">
+      <div id="classify-scenarios" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px" id="classify-types"></div>
+      <div id="classify-feedback" style="font-size:13px;color:var(--text-muted)"></div>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn btn-outline" onclick="resetClassify()">&#8635; Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 20: Full Malware Comparison -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="20">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory Recap</span>
+    <h1>Malware Comparison Table</h1>
+    <p class="slide-subtitle">All five types side-by-side — a useful reference</p>
+
+    <table class="data-table">
+      <thead><tr><th>Type</th><th>Spreads How?</th><th>User Action Needed?</th><th>Primary Damage</th><th>Key Defense</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-red">Ransomware</span></td>
+          <td>Email / RDP / Web</td>
+          <td>Often</td>
+          <td>Encrypted data, extortion</td>
+          <td>Offline backups</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-orange">Virus</span></td>
+          <td>File sharing / USB</td>
+          <td>Yes (share file)</td>
+          <td>File corruption, spread</td>
+          <td>AV + patching</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-orange">Worm</span></td>
+          <td>Network scanning</td>
+          <td>No</td>
+          <td>Network congestion, payloads</td>
+          <td>Patching + segmentation</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-purple">Trojan</span></td>
+          <td>Deception / social engineering</td>
+          <td>Yes (install app)</td>
+          <td>Backdoor, data theft</td>
+          <td>User education + AV</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-blue">Adware</span></td>
+          <td>Bundled software</td>
+          <td>Yes (install app)</td>
+          <td>Privacy, intrusive ads</td>
+          <td>Cautious installs + AV</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box info">
+      <strong>SOC Analyst Tip:</strong> When triaging an incident, the first questions to ask are: "Did this spread on its own?" (→ worm), "Was a user tricked?" (→ trojan), "Are files encrypted?" (→ ransomware). This narrows the response playbook quickly.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 21: VirusTotal Overview -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="21">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>VirusTotal</h1>
+    <p class="slide-subtitle">Free online multi-engine malware scanner — a SOC analyst's daily tool</p>
+
+    <h2>What It Does</h2>
+    <p>VirusTotal aggregates <strong>70+ antivirus engines</strong> and sandbox tools to analyze:</p>
+    <ul>
+      <li><strong>Files</strong> &mdash; upload any file up to 650 MB for instant multi-AV scan</li>
+      <li><strong>URLs</strong> &mdash; check if a link leads to malicious content or phishing</li>
+      <li><strong>Hashes</strong> &mdash; look up MD5 / SHA-1 / SHA-256 to find previous scan reports</li>
+      <li><strong>IP addresses &amp; domains</strong> &mdash; check reputation and associated malware</li>
+    </ul>
+
+    <h2>Key Features</h2>
+    <div class="card-grid">
+      <div class="g-card">
+        <div class="g-icon">&#9889;</div>
+        <div class="g-title">Real-Time Detection</div>
+        <div class="g-text">Results from 70+ engines in seconds; database updated continuously</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128101;</div>
+        <div class="g-title">Community Comments</div>
+        <div class="g-text">Security researchers add context, behavioral notes, and YARA rules</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128279;</div>
+        <div class="g-title">Relationship Graph</div>
+        <div class="g-text">Visualize connections between files, domains, IPs, and threat actors</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128202;</div>
+        <div class="g-title">Behavioral Analysis</div>
+        <div class="g-text">Sandbox execution shows file writes, registry changes, and network calls</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 22: VirusTotal — How to Use & Limitations -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="22">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Using VirusTotal Effectively</h1>
+    <p class="slide-subtitle">Practical workflow and important limitations to understand</p>
+
+    <h2>Analyst Workflow</h2>
+    <ol>
+      <li><strong>Hash first</strong> &mdash; look up the SHA-256 hash before uploading; avoids sending sensitive files to a public platform</li>
+      <li><strong>Check detection ratio</strong> &mdash; "3/72 engines" vs "65/72 engines" tells very different stories</li>
+      <li><strong>Read engine names</strong> &mdash; reputable engines (Kaspersky, Microsoft, Sophos) flagging = high confidence</li>
+      <li><strong>Check the Behavior tab</strong> &mdash; sandbox report reveals what the file actually <em>does</em></li>
+      <li><strong>Explore Relations</strong> &mdash; see what domains/IPs the file contacts, related hashes</li>
+    </ol>
+
+    <h2>Critical Limitations</h2>
+    <div class="info-box warn">
+      <strong>False Positives:</strong> A file flagged by 1–2 obscure engines may be a false positive. Context matters — check which engines, how reputable, and what category they label it.
+    </div>
+    <div class="info-box danger">
+      <strong>Privacy Warning:</strong> Any file uploaded to VirusTotal becomes available to VirusTotal's premium subscribers. <strong>Never upload confidential documents, source code with credentials, or PII.</strong> Hash lookup is the safer alternative.
+    </div>
+    <div class="info-box info">
+      <strong>Clean ≠ Safe:</strong> 0/72 detections doesn't guarantee safety. New zero-day malware or custom samples won't match any signatures yet.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 23: Exercise — Read a VT Report -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="23">
+  <div class="slide-inner">
+    <span class="slide-label lbl-exercise">&#9881; Exercise 3</span>
+    <h1>Interpret a VirusTotal Report</h1>
+    <p class="slide-subtitle">A suspicious file was submitted. Analyze the report summary below and answer each question.</p>
+
+    <pre style="font-size:11.5px"><code>File name  : invoice_march2026.pdf.exe
+SHA-256    : a1b2c3d4e5f6...
+File size  : 324 KB
+First seen : 2026-03-09 (2 days ago)
+Detection  : 54 / 72 engines
+
+Notable detections:
+  Microsoft     → Trojan:Win32/AgentTesla.B!ml
+  Kaspersky     → Trojan-Spy.Win32.AgentTesla
+  Sophos        → Troj/AgentTes-A
+  McAfee        → GenericRXAA-AA!A1B2C3D4E5F6
+
+Behavior (sandbox):
+  - Creates registry key: HKCU\Software\Microsoft\Windows\CurrentVersion\Run\update
+  - Connects to: 185.220.101.45:8080 (Tor exit node)
+  - Reads keystrokes
+  - Accesses browser credential stores (Chrome, Firefox)</code></pre>
+
+    <div class="quiz-block" id="q11" style="margin-top:14px">
+      <div class="q-question">Based on this report, what type of malware is this file?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q11',this,false)"><span class="q-letter">A</span> Ransomware — it will encrypt files</div>
+        <div class="q-opt" onclick="checkQuiz('q11',this,true)"><span class="q-letter">B</span> Trojan / Spyware (AgentTesla) — keylogger and credential stealer</div>
+        <div class="q-opt" onclick="checkQuiz('q11',this,false)"><span class="q-letter">C</span> Adware — it will inject browser ads</div>
+        <div class="q-opt" onclick="checkQuiz('q11',this,false)"><span class="q-letter">D</span> Worm — it will scan and spread across the network</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q11-correct">Correct! AgentTesla is a well-known info-stealer/keylogger Trojan. The registry Run key = persistence. The C2 connection, keylogging, and credential store access confirm spyware behavior.</div>
+      <div class="q-feedback fb-wrong" id="q11-wrong">Not quite. AgentTesla is a credential-stealing spyware Trojan. Key indicators: reads keystrokes, accesses browser credentials, contacts Tor C2, and establishes persistence via registry Run key.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 24: VirusTotal Quiz -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="24">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Quiz</span>
+    <h1>VirusTotal Knowledge Check</h1>
+    <p class="slide-subtitle">Two questions about VirusTotal best practices</p>
+
+    <div class="quiz-block" id="q12">
+      <div class="q-question">1. Why should you perform a hash lookup instead of uploading a suspicious file found on a corporate endpoint?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q12',this,false)"><span class="q-letter">A</span> Hash lookups are faster and more accurate</div>
+        <div class="q-opt" onclick="checkQuiz('q12',this,true)"><span class="q-letter">B</span> Uploading the file makes it publicly available to VirusTotal subscribers — risking confidentiality</div>
+        <div class="q-opt" onclick="checkQuiz('q12',this,false)"><span class="q-letter">C</span> VT cannot scan executable files directly</div>
+        <div class="q-opt" onclick="checkQuiz('q12',this,false)"><span class="q-letter">D</span> The file upload limit is too small for most malware</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q12-correct">Correct! Files uploaded to VT become part of their public dataset accessible to premium users. Sensitive files (source code, documents with PII) should never be uploaded.</div>
+      <div class="q-feedback fb-wrong" id="q12-wrong">Not quite. The key concern is privacy — uploaded files are shared with VirusTotal's premium subscriber base. Always hash-lookup first for sensitive files.</div>
+    </div>
+
+    <div class="quiz-block" id="q13" style="margin-top:16px">
+      <div class="q-question">2. A file gets 0/72 detections on VirusTotal. What should an analyst conclude?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q13',this,false)"><span class="q-letter">A</span> The file is definitely safe — no further action needed</div>
+        <div class="q-opt" onclick="checkQuiz('q13',this,false)"><span class="q-letter">B</span> The file is malicious and needs to be quarantined immediately</div>
+        <div class="q-opt" onclick="checkQuiz('q13',this,true)"><span class="q-letter">C</span> The file may still be malicious — zero-day or custom malware won't have signatures yet</div>
+        <div class="q-opt" onclick="checkQuiz('q13',this,false)"><span class="q-letter">D</span> The antivirus engines are outdated</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q13-correct">Correct! VT relies on signatures. A brand-new or custom-built malware sample won't match any existing signatures — 0/72 doesn't mean safe.</div>
+      <div class="q-feedback fb-wrong" id="q13-wrong">Not quite. VT is signature-based. Novel or custom malware won't be detected. Additional analysis (sandbox, EDR telemetry) is always needed for high-risk files.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 25: EDR Overview -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="25">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Endpoint Detection &amp; Response (EDR)</h1>
+    <p class="slide-subtitle">Real-time visibility and response at the device level — beyond traditional AV</p>
+
+    <h2>Why Traditional AV Isn't Enough</h2>
+    <p>Classic antivirus matches known signatures. It misses:</p>
+    <ul>
+      <li>Zero-day exploits (no signature exists yet)</li>
+      <li>Living-off-the-land attacks (using legitimate OS tools like PowerShell, WMI)</li>
+      <li>Fileless malware (runs entirely in memory)</li>
+      <li>Lateral movement after initial compromise</li>
+    </ul>
+
+    <h2>EDR Core Capabilities</h2>
+    <div class="card-grid">
+      <div class="g-card">
+        <div class="g-icon">&#128250;</div>
+        <div class="g-title">Continuous Recording</div>
+        <div class="g-text">Records all endpoint activity — process creation, file writes, network connections, registry changes</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128200;</div>
+        <div class="g-title">Behavioral Analysis</div>
+        <div class="g-text">Flags deviations from normal behavior, not just known signatures</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128268;</div>
+        <div class="g-title">Endpoint Isolation</div>
+        <div class="g-text">Can quarantine a compromised host from the network with one click to stop lateral movement</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">&#128269;</div>
+        <div class="g-title">Threat Hunting</div>
+        <div class="g-text">Analysts can query historical data to find threats that bypassed initial detection</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 26: EDR vs SIEM -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="26">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>EDR vs SIEM</h1>
+    <p class="slide-subtitle">Complementary tools — not alternatives</p>
+
+    <table class="data-table">
+      <thead><tr><th>Aspect</th><th>EDR</th><th>SIEM</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Focus</strong></td><td>Individual endpoints (devices)</td><td>Organization-wide log aggregation</td></tr>
+        <tr><td><strong>Data Source</strong></td><td>Endpoint agent telemetry</td><td>Logs from all systems (network, apps, cloud)</td></tr>
+        <tr><td><strong>Response</strong></td><td>Can isolate endpoint, kill process, quarantine file</td><td>Alert + workflow; response is manual</td></tr>
+        <tr><td><strong>Detection</strong></td><td>Behavioral + signatures at host level</td><td>Rule-based correlation across data sources</td></tr>
+        <tr><td><strong>Threat Hunting</strong></td><td>Deep endpoint forensics</td><td>Broad correlation across the environment</td></tr>
+        <tr><td><strong>Examples</strong></td><td>CrowdStrike Falcon, SentinelOne, Wazuh</td><td>Splunk, Microsoft Sentinel, Wazuh</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box success">
+      <strong>Together they're stronger:</strong> SIEM gives you the big picture across your entire environment. EDR gives you deep forensic detail and automated response at each machine. Wazuh uniquely combines both.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 27: Wazuh -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="27">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>Wazuh</h1>
+    <p class="slide-subtitle">Open-source SIEM + EDR — built on the ELK stack</p>
+
+    <h2>Architecture</h2>
+    <div class="vs-grid">
+      <div class="vs-col">
+        <h3>&#128100; Wazuh Agents</h3>
+        <ul style="font-size:12px">
+          <li>Lightweight agents installed on each endpoint</li>
+          <li>Collect logs, monitor files, detect intrusions</li>
+          <li>Available for Windows, Linux, macOS</li>
+          <li>Send telemetry to the Wazuh Manager</li>
+        </ul>
+      </div>
+      <div class="vs-col">
+        <h3>&#128208; Wazuh Manager + ELK</h3>
+        <ul style="font-size:12px">
+          <li>Receives and analyzes agent data</li>
+          <li>Elasticsearch stores and indexes data</li>
+          <li>Kibana provides the visualization dashboard</li>
+          <li>Custom decoders + rules for alert logic</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Key Wazuh Modules</h2>
+    <table class="data-table">
+      <thead><tr><th>Module</th><th>What It Does</th></tr></thead>
+      <tbody>
+        <tr><td><strong>FIM (File Integrity Monitoring)</strong></td><td>Alerts on any file modification to critical system files</td></tr>
+        <tr><td><strong>HIDS</strong></td><td>Host-based intrusion detection — suspicious process, privilege escalation</td></tr>
+        <tr><td><strong>Vulnerability Detection</strong></td><td>Compares installed software against CVE databases</td></tr>
+        <tr><td><strong>SCA (Security Config Assessment)</strong></td><td>Checks endpoints against CIS benchmarks</td></tr>
+        <tr><td><strong>MITRE ATT&amp;CK Integration</strong></td><td>Maps detected events to ATT&amp;CK tactics and techniques</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 28: EDR & Wazuh in a SOC -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="28">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Theory</span>
+    <h1>EDR in the SOC Workflow</h1>
+    <p class="slide-subtitle">How SOC analysts use EDR day-to-day</p>
+
+    <h2>Typical Alert Response Flow</h2>
+    <ol>
+      <li><strong>Alert fired</strong> &mdash; SIEM / EDR raises alert (e.g. suspicious PowerShell encoded command)</li>
+      <li><strong>Triage</strong> &mdash; analyst checks the host's process tree, parent/child relationships</li>
+      <li><strong>Enrich</strong> &mdash; look up file hashes on VirusTotal; check IOC feeds</li>
+      <li><strong>Contain</strong> &mdash; if malicious, isolate the host via EDR one-click isolation</li>
+      <li><strong>Investigate</strong> &mdash; timeline the attack using EDR historical data; identify patient zero</li>
+      <li><strong>Remediate</strong> &mdash; delete malicious files, restore from backup, patch vulnerability</li>
+      <li><strong>Document</strong> &mdash; write incident report; update detection rules to catch similar activity</li>
+    </ol>
+
+    <div class="info-box lab-box">
+      <strong>Lab Context:</strong> In the Wazuh lab, you'll see this workflow in action — triggering alerts via test events, reading them in the Wazuh dashboard, and understanding how agent telemetry maps to security events.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 29: Quiz — EDR & Wazuh -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="29">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Quiz</span>
+    <h1>EDR &amp; Wazuh Quiz</h1>
+    <p class="slide-subtitle">Three questions — some advanced, think carefully</p>
+
+    <div class="quiz-block" id="q14">
+      <div class="q-question">1. A malware sample runs entirely in memory and never writes to disk. Traditional AV won't detect it. Which EDR capability is best suited to catch this?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q14',this,false)"><span class="q-letter">A</span> File Integrity Monitoring</div>
+        <div class="q-opt" onclick="checkQuiz('q14',this,false)"><span class="q-letter">B</span> Signature-based scanning</div>
+        <div class="q-opt" onclick="checkQuiz('q14',this,true)"><span class="q-letter">C</span> Behavioral / anomaly detection</div>
+        <div class="q-opt" onclick="checkQuiz('q14',this,false)"><span class="q-letter">D</span> Vulnerability scanning</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q14-correct">Correct! Fileless malware has no file to scan. Behavioral analysis detects the suspicious actions it takes (injecting into processes, unusual network calls) regardless of how it runs.</div>
+      <div class="q-feedback fb-wrong" id="q14-wrong">Not quite. FIM and signatures need a file. Behavioral analysis monitors what a process *does*, not what it *is* — making it the right tool for fileless threats.</div>
+    </div>
+
+    <div class="quiz-block" id="q15" style="margin-top:16px">
+      <div class="q-question">2. Wazuh's FIM module generates an alert. What does this mean?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q15',this,false)"><span class="q-letter">A</span> A firewall rule was triggered</div>
+        <div class="q-opt" onclick="checkQuiz('q15',this,true)"><span class="q-letter">B</span> A monitored file or directory was created, modified, or deleted</div>
+        <div class="q-opt" onclick="checkQuiz('q15',this,false)"><span class="q-letter">C</span> A new user account was created</div>
+        <div class="q-opt" onclick="checkQuiz('q15',this,false)"><span class="q-letter">D</span> Suspicious network traffic was detected</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q15-correct">Correct! FIM = File Integrity Monitoring. It watches critical system files (like /etc/passwd on Linux or Windows System32) and alerts on any unauthorized changes.</div>
+      <div class="q-feedback fb-wrong" id="q15-wrong">Not quite. FIM = File Integrity Monitoring. It detects unauthorized changes to critical files — a common indicator of malware persistence or attacker activity.</div>
+    </div>
+
+    <div class="quiz-block" id="q16" style="margin-top:16px">
+      <div class="q-question">3. Why is endpoint isolation an important EDR feature during an active ransomware incident?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q16',this,false)"><span class="q-letter">A</span> It decrypts the affected files automatically</div>
+        <div class="q-opt" onclick="checkQuiz('q16',this,true)"><span class="q-letter">B</span> It cuts off the infected machine from the network, preventing spread to other hosts</div>
+        <div class="q-opt" onclick="checkQuiz('q16',this,false)"><span class="q-letter">C</span> It removes the ransomware from memory immediately</div>
+        <div class="q-opt" onclick="checkQuiz('q16',this,false)"><span class="q-letter">D</span> It forces a reboot to clear the infection</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q16-correct">Correct! Speed is everything with ransomware. Isolation severs the infected host from the network, stopping lateral movement and preventing encryption of shared drives or other machines.</div>
+      <div class="q-feedback fb-wrong" id="q16-wrong">Not quite. Isolation = cutting off network access. This stops the ransomware from spreading to shared drives, backup servers, or other machines while you respond.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 30: Prevention Best Practices -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="30">
+  <div class="slide-inner">
+    <span class="slide-label lbl-theory">&#128218; Summary</span>
+    <h1>Unified Defense Strategy</h1>
+    <p class="slide-subtitle">Defense-in-depth — no single control is enough</p>
+
+    <table class="data-table">
+      <thead><tr><th>Control Layer</th><th>What It Covers</th><th>Tools</th></tr></thead>
+      <tbody>
+        <tr><td><strong>User Education</strong></td><td>Phishing, social engineering, suspicious links</td><td>Security awareness training</td></tr>
+        <tr><td><strong>Email Security</strong></td><td>Malicious attachments, phishing links</td><td>Email gateway filters, sandboxing</td></tr>
+        <tr><td><strong>Endpoint Protection</strong></td><td>Virus, Trojan, Worm, Ransomware on devices</td><td>AV + EDR (Wazuh, CrowdStrike)</td></tr>
+        <tr><td><strong>Patch Management</strong></td><td>Worm propagation via known CVEs</td><td>WSUS, patch automation</td></tr>
+        <tr><td><strong>Network Segmentation</strong></td><td>Limits worm/ransomware lateral spread</td><td>VLANs, firewall rules, micro-segmentation</td></tr>
+        <tr><td><strong>Backup Strategy</strong></td><td>Ransomware recovery</td><td>Offline + offsite backups, tested restores</td></tr>
+        <tr><td><strong>Threat Intelligence</strong></td><td>IOC-based blocking, emerging threats</td><td>VirusTotal, MITRE ATT&amp;CK, threat feeds</td></tr>
+        <tr><td><strong>Incident Response</strong></td><td>Detection, containment, eradication</td><td>SIEM + EDR + playbooks</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box success">
+      <strong>Key Mindset:</strong> Assume breach. Focus on detection speed and response capability, not just prevention. The faster you detect and isolate, the less damage malware causes.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SLIDE 31: Final Challenge Quiz -->
+<!-- ============================================================ -->
+<div class="slide" data-slide="31">
+  <div class="slide-inner">
+    <span class="slide-label lbl-quiz">&#9997; Final Challenge</span>
+    <h1>Scenario-Based Final Quiz</h1>
+    <p class="slide-subtitle">Advanced scenarios — put everything together</p>
+
+    <div class="quiz-block" id="q17">
+      <div class="q-question">Scenario: Monday morning, employees arrive and find all their Word/Excel files renamed to <code>.locked</code>. Network shares are also encrypted. The CEO's PC shows a pop-up demanding $50,000 in Bitcoin. Other PCs on the same VLAN appear unaffected. What type of attack is this and what is the FIRST action a SOC analyst should take?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q17',this,false)"><span class="q-letter">A</span> Worm attack — update all antivirus signatures immediately</div>
+        <div class="q-opt" onclick="checkQuiz('q17',this,false)"><span class="q-letter">B</span> Ransomware — pay the ransom to restore files before it spreads</div>
+        <div class="q-opt" onclick="checkQuiz('q17',this,true)"><span class="q-letter">C</span> Ransomware — isolate the CEO's machine via EDR immediately to prevent further spread</div>
+        <div class="q-opt" onclick="checkQuiz('q17',this,false)"><span class="q-letter">D</span> Trojan — run a full virus scan on all machines</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q17-correct">Correct! .locked extension + ransom demand = ransomware. First action = ISOLATE. Use EDR to cut the machine off the network immediately. Then: preserve evidence, identify patient zero, check backups. Do NOT pay &mdash; it encourages attackers and offers no guarantee.</div>
+      <div class="q-feedback fb-wrong" id="q17-wrong">Not quite. .locked files + Bitcoin ransom = crypto-ransomware. The first action is always isolation via EDR to stop spread. Never pay without exhausting all recovery options first. Evidence must be preserved for investigation.</div>
+    </div>
+
+    <div class="quiz-block" id="q18" style="margin-top:16px">
+      <div class="q-question">A Wazuh alert fires: <code>Rule 550 — Integrity checksum changed for /etc/passwd</code>. What does this indicate and why is it serious?</div>
+      <div class="q-options">
+        <div class="q-opt" onclick="checkQuiz('q18',this,false)"><span class="q-letter">A</span> A routine system update modified a config file — no action needed</div>
+        <div class="q-opt" onclick="checkQuiz('q18',this,true)"><span class="q-letter">B</span> An unauthorized modification to the user account database — possible backdoor account creation</div>
+        <div class="q-opt" onclick="checkQuiz('q18',this,false)"><span class="q-letter">C</span> A virus infected the passwd file and it needs to be quarantined</div>
+        <div class="q-opt" onclick="checkQuiz('q18',this,false)"><span class="q-letter">D</span> Wazuh's FIM module malfunctioned and generated a false alert</div>
+      </div>
+      <div class="q-feedback fb-correct" id="q18-correct">Correct! /etc/passwd stores user accounts on Linux. An unexpected change could mean an attacker added a backdoor user account. This is a critical Wazuh FIM alert requiring immediate investigation of who made the change and when.</div>
+      <div class="q-feedback fb-wrong" id="q18-wrong">Not quite. /etc/passwd = Linux user account database. An unexpected change here is a serious indicator — attackers commonly add backdoor accounts for persistence. Even if it was a legitimate admin action, it must be verified immediately.</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.slide-viewport -->
+
+<!-- ═══ NAVIGATION ═══ -->
+<div class="nav-bar">
+  <button class="nav-btn" id="btn-prev" onclick="navigate(-1)" disabled>&#8592; Prev</button>
+  <div class="nav-dots" id="nav-dots"></div>
+  <button class="nav-btn" id="btn-next" onclick="navigate(1)">Next &#8594;</button>
+</div>
+
+<div class="statusbar">
+  <div class="sb-item"><div class="sb-dot"></div> W4D3 &mdash; Malware Attack Analysis</div>
+  <div class="sb-sep"></div>
+  <div class="sb-item">&#128027; Ransomware &bull; Virus &bull; Worm &bull; Trojan &bull; Adware &bull; VirusTotal &bull; EDR</div>
+  <div class="sb-right">
+    <div class="sb-item">&#128274; SOCAdemy</div>
+  </div>
+</div>
+
+</div><!-- /.app -->
+
+<script>
+// ── Navigation ────────────────────────────────────────────────
+const TOTAL = 31;
+let current = 1;
+
+function navigate(dir) {
+  const next = current + dir;
+  if (next < 1 || next > TOTAL) return;
+  document.querySelector(`.slide[data-slide="${current}"]`).classList.remove('active');
+  current = next;
+  document.querySelector(`.slide[data-slide="${current}"]`).classList.add('active');
+  document.getElementById('slide-counter').textContent = `${current} / ${TOTAL}`;
+  document.getElementById('btn-prev').disabled = current === 1;
+  document.getElementById('btn-next').disabled = current === TOTAL;
+  document.querySelectorAll('.nav-dot').forEach((d, i) => d.classList.toggle('active', i + 1 === current));
+}
+
+// Build nav dots
+const dotsEl = document.getElementById('nav-dots');
+for (let i = 1; i <= TOTAL; i++) {
+  const d = document.createElement('div');
+  d.className = 'nav-dot' + (i === 1 ? ' active' : '');
+  d.title = `Slide ${i}`;
+  d.onclick = () => { navigate(i - current); };
+  dotsEl.appendChild(d);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') navigate(1);
+  if (e.key === 'ArrowLeft') navigate(-1);
+});
+
+// ── Quiz Handler ──────────────────────────────────────────────
+function checkQuiz(blockId, el, isCorrect) {
+  const block = document.getElementById(blockId);
+  if (block.dataset.answered) return;
+  block.dataset.answered = 'true';
+
+  block.querySelectorAll('.q-opt').forEach(o => {
+    o.style.pointerEvents = 'none';
+    if (o === el) o.classList.add(isCorrect ? 'correct' : 'wrong');
+  });
+
+  const correct = block.querySelector('.q-feedback.fb-correct');
+  const wrong = block.querySelector('.q-feedback.fb-wrong');
+  if (isCorrect) { correct.classList.add('show'); }
+  else { wrong.classList.add('show'); }
+}
+
+// ── Lifecycle Drag & Drop ─────────────────────────────────────
+let dragSrc = null;
+
+function initDragDrop() {
+  document.querySelectorAll('.lc-item').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      dragSrc = item;
+      setTimeout(() => item.classList.add('dragging'), 0);
+    });
+    item.addEventListener('dragend', () => item.classList.remove('dragging'));
+    item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      if (dragSrc && dragSrc !== item) {
+        const list = item.parentNode;
+        const allItems = [...list.children];
+        const srcIdx = allItems.indexOf(dragSrc);
+        const tgtIdx = allItems.indexOf(item);
+        if (srcIdx < tgtIdx) list.insertBefore(dragSrc, item.nextSibling);
+        else list.insertBefore(dragSrc, item);
+      }
+    });
+  });
+}
+
+function checkLifecycle() {
+  const items = document.querySelectorAll('#lc-list .lc-item');
+  let correct = 0;
+  items.forEach((item, idx) => {
+    const expectedPos = parseInt(item.dataset.correct);
+    const actualPos = idx + 1;
+    item.classList.remove('correct-pos', 'wrong-pos');
+    item.querySelector('.lc-num').textContent = actualPos;
+    if (expectedPos === actualPos) { item.classList.add('correct-pos'); correct++; }
+    else { item.classList.add('wrong-pos'); }
+  });
+
+  const result = document.getElementById('lc-result');
+  result.style.display = 'block';
+  if (correct === 6) {
+    result.textContent = '🎉 Perfect! All 6 stages in the correct order.\n\nDelivery → Execution → Persistence → Encryption → Ransom Note → Payment';
+    result.style.borderColor = 'var(--success)';
+  } else {
+    result.textContent = `${correct}/6 correct.\n\nCorrect order:\n1. Phishing email delivers attachment (Delivery)\n2. Victim opens attachment; payload executes (Execution)\n3. Malware adds itself to startup (Persistence)\n4. Files encrypted with RSA + AES (Encryption)\n5. Ransom note with payment instructions (Ransom Note)\n6. Victim pays ransom in cryptocurrency (Payment)`;
+    result.style.borderColor = correct >= 4 ? 'var(--sev-med)' : 'var(--sev-high)';
+  }
+}
+
+function resetLifecycle() {
+  const list = document.getElementById('lc-list');
+  const items = [...list.querySelectorAll('.lc-item')];
+  // shuffle
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    list.appendChild(items[j]);
+    items.splice(j, 1);
+    items.splice(i, 0, items[j < i ? j : i]);
+  }
+  list.querySelectorAll('.lc-item').forEach(item => {
+    item.classList.remove('correct-pos', 'wrong-pos');
+    item.querySelector('.lc-num').textContent = '?';
+  });
+  const result = document.getElementById('lc-result');
+  result.style.display = 'none';
+}
+
+initDragDrop();
+
+// ── Classify Exercise ─────────────────────────────────────────
+const classifyData = [
+  { text: 'Encrypts all .docx and .xlsx files, demands Bitcoin payment', type: 'Ransomware' },
+  { text: 'Hides inside a Word macro; spreads when the document is shared', type: 'Virus' },
+  { text: 'Autonomously scans port 445 across subnets, copies itself to unpatched hosts', type: 'Worm' },
+  { text: 'Disguised as a free game installer; opens a backdoor for remote access', type: 'Trojan' },
+  { text: 'Installed with a PDF reader; injects pop-up ads into every webpage visited', type: 'Adware' },
+  { text: 'Self-replicates via email attachments and corrupts .exe files on execution', type: 'Virus' },
+];
+
+let selectedScenario = null;
+let classifyScore = { correct: 0, total: 0 };
+
+function initClassify() {
+  const scenarioEl = document.getElementById('classify-scenarios');
+  const typeEl = document.getElementById('classify-types');
+  scenarioEl.innerHTML = '';
+  typeEl.innerHTML = '';
+  classifyScore = { correct: 0, total: 0 };
+  selectedScenario = null;
+
+  classifyData.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'classify-chip';
+    el.id = `scenario-${i}`;
+    el.dataset.type = item.type;
+    el.textContent = item.text;
+    el.onclick = () => selectScenario(el, i);
+    scenarioEl.appendChild(el);
+  });
+
+  ['Ransomware', 'Virus', 'Worm', 'Trojan', 'Adware'].forEach(type => {
+    const el = document.createElement('div');
+    el.className = 'classify-chip';
+    el.style.textAlign = 'center';
+    el.style.fontWeight = '600';
+    el.style.cursor = 'pointer';
+    el.textContent = type;
+    el.onclick = () => answerClassify(type);
+    typeEl.appendChild(el);
+  });
+}
+
+function selectScenario(el, idx) {
+  document.querySelectorAll('#classify-scenarios .classify-chip').forEach(c => c.style.borderColor = '');
+  if (el.dataset.answered) return;
+  selectedScenario = { el, idx };
+  el.style.borderColor = 'var(--accent-blue)';
+  document.getElementById('classify-feedback').textContent = 'Now click the malware type that matches this scenario.';
+}
+
+function answerClassify(type) {
+  if (!selectedScenario) {
+    document.getElementById('classify-feedback').textContent = 'First click a scenario (grey box above), then click a malware type.';
+    return;
+  }
+  const { el } = selectedScenario;
+  if (el.dataset.answered) return;
+
+  const correct = el.dataset.type === type;
+  el.dataset.answered = 'true';
+  el.classList.add(correct ? 'placed-correct' : 'placed-wrong');
+  el.style.borderColor = '';
+  el.style.cursor = 'default';
+  classifyScore.total++;
+  if (correct) classifyScore.correct++;
+
+  const feedback = document.getElementById('classify-feedback');
+  feedback.textContent = correct
+    ? `✓ Correct! That is ${type}. Score: ${classifyScore.correct}/${classifyScore.total}`
+    : `✗ Not quite — that's ${el.dataset.type}, not ${type}. Score: ${classifyScore.correct}/${classifyScore.total}`;
+  feedback.style.color = correct ? 'var(--success-text)' : 'var(--sev-high-text)';
+
+  selectedScenario = null;
+}
+
+function resetClassify() {
+  initClassify();
+  document.getElementById('classify-feedback').textContent = '';
+}
+
+initClassify();
+</script>
+</body>
+</html>
